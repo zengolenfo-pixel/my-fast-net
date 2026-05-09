@@ -1,150 +1,26 @@
-name: Enterprise-Windows-RDP-Workspace
+name: TS
 
 on:
-  workflow_dispatch:      # Manual trigger
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # Auto-restart schedule
+    - cron: '13 */5 * * *'
 
 jobs:
-  deploy-windows-workspace:
-    name: Build & Configure Remote Desktop
-    runs-on: windows-latest
-    timeout-minutes: 360 # 6 hours maximum duration
-
+  exit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
-      - name: 🟢 STEP 1 - Hardware & Environment Audit
-        run: |
-          Write-Host "=================================================="
-          Write-Host "     INITIALIZING ENTERPRISE WINDOWS RUNNER       "
-          Write-Host "=================================================="
-          Write-Host "System Information:"
-          systeminfo | Select-String "OS Name","OS Version","System Type","Total Physical Memory"
-          Write-Host "Logical Drives:"
-          Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, VolumeName, @{Name="FreeSpace(GB)";Expression={[math]::Round($_.FreeSpace/1GB,2)}} | Format-Table
-          
-      - name: 🟢 STEP 2 - Windows Performance & Visual Optimization
-        run: |
-          Write-Host "Optimizing Windows for low-latency RDP..."
-          Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name 'VisualFXSetting' -Value 2 -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management' -Name 'ClearPageFileAtShutdown' -Value 0 -Force
-          powercfg.exe /hibernate off
-          Write-Host "Performance tweaks applied successfully."
-
-      - name: 🟢 STEP 3 - Advanced Network TCP Tuning
-        run: |
-          Write-Host "Applying Network TCP Optimizations..."
-          netsh int tcp set global autotuninglevel=normal
-          netsh int tcp set global chimney=enabled
-          netsh int tcp set global dca=enabled
-          netsh int tcp set global netdma=enabled
-          netsh int tcp set global ecncapability=enabled
-          Write-Host "TCP Stack calibrated."
-
-      - name: 🟢 STEP 4 - Core RDP Service Configuration
-        run: |
-          Write-Host "Configuring Terminal Services..."
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 0 -Force
-
-          netsh advfirewall firewall delete rule name="RDP-Tailscale" | Out-Null
-          netsh advfirewall firewall add rule name="RDP-Tailscale" dir=in action=allow protocol=TCP localport=3389 | Out-Null
-          
-          Restart-Service -Name TermService -Force
-          Write-Host "RDP Services Enabled and Firewall Configured."
-
-      - name: 🟢 STEP 5 - Software Provisioning (Decoy & Utilities)
-        run: |
-          Write-Host "Installing Essential Developer Tools (Chrome, 7-Zip)..."
-          Set-ExecutionPolicy Bypass -Scope Process -Force
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-          Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco install googlechrome -y --no-progress
-          choco install 7zip -y --no-progress
-          Write-Host "Software Provisioning Complete."
-
-      - name: 🟢 STEP 6 - Secure Identity Generation
-        run: |
-          Write-Host "Generating Cryptographically Secure Credentials..."
-          Add-Type -AssemblyName System.Security
-          $charSet = @{
-              Upper   = [char[]](65..90)
-              Lower   = [char[]](97..122)
-              Number  = [char[]](48..57)
-              Special = [char[]](33..47) + [char[]](58..64)
-          }
-          $rawPassword = @()
-          $rawPassword += $charSet.Upper | Get-Random -Count 4
-          $rawPassword += $charSet.Lower | Get-Random -Count 4
-          $rawPassword += $charSet.Number | Get-Random -Count 4
-          $rawPassword += $charSet.Special | Get-Random -Count 3
-          $password = -join ($rawPassword | Sort-Object { Get-Random })
-          
-          $securePass = ConvertTo-SecureString $password -AsPlainText -Force
-          New-LocalUser -Name "AdminRDP" -Password $securePass -AccountNeverExpires
-          Add-LocalGroupMember -Group "Administrators" -Member "AdminRDP"
-          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "AdminRDP"
-          
-          echo "RDP_USER=AdminRDP" >> $env:GITHUB_ENV
-          echo "RDP_PASS=$password" >> $env:GITHUB_ENV
-          Write-Host "User 'AdminRDP' created and added to Administrators."
-
-      - name: 🟢 STEP 7 - Tailscale Mesh Network Integration
-        run: |
-          Write-Host "Downloading Tailscale Installer..."
-          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe"
-          $installerPath = "$env:TEMP\tailscale-setup.exe"
-          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          
-          Write-Host "Running Silent Installation..."
-          Start-Process -FilePath $installerPath -ArgumentList "/quiet", "/norestart" -Wait
-          
-          Write-Host "Authenticating Node with Mesh Network..."
-          $TS_PATH = "C:\Program Files\Tailscale\tailscale.exe"
-          
-          # ADDED THE FLAG HERE: --advertise-exit-node
-          & $TS_PATH up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=win-workspace-$env:GITHUB_RUN_ID --advertise-exit-node
-          
-          Write-Host "Acquiring IP Address..."
-          $tsIP = $null
-          $retries = 0
-          while (-not $tsIP -and $retries -lt 15) {
-              $tsIP = & $TS_PATH ip -4
-              Start-Sleep -Seconds 4
-              $retries++
-          }
-          
-          if (-not $tsIP) {
-              Write-Error "Failed to acquire Tailscale IP. Check your TAILSCALE_AUTH_KEY secret."
-              exit 1
-          }
-          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
-          Write-Host "Node successfully integrated. IP: $tsIP"
-
-      - name: 🟢 STEP 8 - Connection Dashboard & Watchdog Loop
-        run: |
-          Write-Host "=================================================="
-          Write-Host "         RDP WORKSPACE IS ONLINE & READY          "
-          Write-Host "=================================================="
-          Write-Host "🖥️ CONNECT VIA MICROSOFT RD CLIENT"
-          Write-Host "--------------------------------------------------"
-          Write-Host "🌐 IP Address : $env:TAILSCALE_IP"
-          Write-Host "👤 Username   : $env:RDP_USER"
-          Write-Host "🔑 Password   : $env:RDP_PASS"
-          Write-Host "=================================================="
-          Write-Host "The system is now monitoring stability..."
-          Write-Host ""
-          
-          # Indefinite Watchdog Loop to keep the GitHub Action alive and log health metrics
-          $loopCount = 0
-          while ($true) {
-              $cpuUsage = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select-Object -ExpandProperty Average
-              $ram = Get-WmiObject Win32_OperatingSystem
-              $ramUsage = [math]::Round((($ram.TotalVisibleMemorySize - $ram.FreePhysicalMemory) / $ram.TotalVisibleMemorySize) * 100, 2)
-              
-              $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-              Write-Host "[$timestamp] Heartbeat $loopCount | CPU: ${cpuUsage}% | RAM: ${ramUsage}% | Tunnel: ACTIVE"
-              
-              Start-Sleep -Seconds 300
-              $loopCount++
-          }
+      - run: |
+          R=$(head /dev/urandom | tr -dc a-z0-9 | head -c7)
+          sudo sysctl -w net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1
+          sudo sysctl -w net.core.rmem_max=2500000 net.core.wmem_max=2500000
+          sudo sysctl -w net.ipv4.tcp_rmem='4096 87380 2500000' net.ipv4.tcp_wmem='4096 65536 2500000'
+          sudo sysctl -w net.ipv4.tcp_congestion_control=bbr net.core.default_qdisc=fq
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey=${{ secrets.TS_KEY }} --hostname=ep-$R --advertise-exit-node --accept-routes --ephemeral --reset
+          sudo tailscale set --advertise-exit-node
+          while true; do
+            tailscale status || sudo tailscale up --authkey=${{ secrets.TS_KEY }} --hostname=ep-$R --advertise-exit-node --accept-routes --ephemeral --reset
+            sudo sysctl -w net.ipv4.tcp_congestion_control=bbr >/dev/null 2>&1
+            sleep 240
+          done
