@@ -41,13 +41,9 @@ jobs:
       - name: 🟢 STEP 3 - Install Lightweight Desktop (XFCE) & XRDP Server
         run: |
           echo "Installing Graphical Interface and Remote Desktop services..."
-          # Update package list silently
           sudo apt-get update -qq
-          
-          # Install xfce4 (lightweight desktop) and xrdp (Remote Desktop Protocol)
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xfce4 xfce4-goodies xrdp dbus-x11
           
-          # Configure XRDP to use the XFCE desktop environment
           echo "xfce4-session" | sudo tee /etc/xrdp/startwm.sh
           sudo chmod +x /etc/xrdp/startwm.sh
           sudo systemctl restart xrdp
@@ -57,16 +53,14 @@ jobs:
       - name: 🟢 STEP 4 - Create Secure RDP User
         run: |
           echo "Generating secure credentials..."
-          # Generate a random 12-character password
-          PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 12 | head -n 1)
+          # FIXED: Using openssl for instant, safe random password generation
+          PASSWORD=$(openssl rand -base64 12 | tr -d '+/' | cut -c1-12)
           USERNAME="AdminRDP"
           
-          # Create the user and set the password
           sudo useradd -m -s /bin/bash $USERNAME
           echo "$USERNAME:$PASSWORD" | sudo chpasswd
           sudo usermod -aG sudo $USERNAME
           
-          # Save credentials to environment for the dashboard display
           echo "RDP_USER=$USERNAME" >> $GITHUB_ENV
           echo "RDP_PASS=$PASSWORD" >> $GITHUB_ENV
           echo "Secure user $USERNAME created."
@@ -77,14 +71,12 @@ jobs:
           curl -fsSL https://tailscale.com/install.sh | sh
           
           echo "Authenticating to Mesh Network..."
-          # Connects using your secret and tells Tailscale this is an Exit Node
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} \
             --hostname=ubuntu-workspace \
             --advertise-exit-node \
             --accept-routes \
             --reset
             
-          # Fetch the assigned IP address
           TS_IP=$(tailscale ip -4)
           echo "TAILSCALE_IP=$TS_IP" >> $GITHUB_ENV
           echo "Node successfully integrated. IP: $TS_IP"
@@ -107,10 +99,9 @@ jobs:
           echo "4. On your phone's Tailscale app, select this as your Exit Node."
           echo "=================================================="
           
-          # Keeps the server alive for GitHub's maximum duration
           count=0
           while true; do
             echo "[$(date)] Heartbeat $count | RDP Active | Tunnel Active"
-            sleep 300 # Sleep for 5 minutes
+            sleep 300
             count=$((count + 1))
           done
