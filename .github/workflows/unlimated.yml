@@ -1,77 +1,116 @@
-name: Ultimate-Ubuntu-Exit-Node
+name: Enterprise-Ubuntu-RDP-And-Exit-Node
 
 on:
-  workflow_dispatch:      # Manual Start
+  workflow_dispatch:      # Manual trigger from your phone
   schedule:
-    - cron: '0 */5 * * *' # Auto-restarts every 5 hours to simulate "unlimited" uptime
+    - cron: '0 */5 * * *' # Auto-restarts every 5 hours for Unlimited Uptime
 
 jobs:
-  deploy-ubuntu-node:
+  deploy-ubuntu-workspace:
     runs-on: ubuntu-latest
-    timeout-minutes: 360 # Maximum time allowed by GitHub (6 hours)
+    timeout-minutes: 360 # 6 hours maximum duration
 
     steps:
       - name: 🟢 STEP 1 - Security & Secret Check
         run: |
-          echo "Checking Tailscale Auth Key..."
+          echo "=================================================="
+          echo "    INITIALIZING SECURE UBUNTU RDP WORKSPACE      "
+          echo "=================================================="
           if [ -z "${{ secrets.TAILSCALE_AUTH_KEY }}" ]; then
-            echo "❌ ERROR: TAILSCALE_AUTH_KEY is missing or empty!"
-            echo "Please add it in your GitHub Repo -> Settings -> Secrets and variables -> Actions."
+            echo "❌ ERROR: TAILSCALE_AUTH_KEY is missing! Add it in GitHub Secrets."
             exit 1
           else
-            echo "✅ Secret found! Proceeding..."
+            echo "✅ Secret found. Proceeding with deployment..."
           fi
 
       - name: 🟢 STEP 2 - Linux Kernel & Speed Optimization
         run: |
-          echo "Applying BBR and low-latency network tweaks..."
+          echo "Applying BBR and low-latency network tweaks for maximum Android speed..."
           sudo sysctl -w net.core.rmem_max=67108864
           sudo sysctl -w net.core.wmem_max=67108864
           sudo sysctl -w net.ipv4.tcp_rmem='4096 87380 67108864'
           sudo sysctl -w net.ipv4.tcp_wmem='4096 65536 67108864'
           sudo sysctl -w net.ipv4.tcp_congestion_control=bbr
           
-          # CRITICAL FOR EXIT NODES: Tells Linux it is allowed to route traffic
+          # CRITICAL FOR EXIT NODES: Tells Linux it is allowed to route your phone's traffic
           sudo sysctl -w net.ipv4.ip_forward=1
           sudo sysctl -w net.ipv6.conf.all.forwarding=1
           sudo sysctl -p
+          echo "Network optimizations applied successfully."
 
-      - name: 🟢 STEP 3 - Install Tailscale
+      - name: 🟢 STEP 3 - Install Lightweight Desktop (XFCE) & XRDP Server
+        run: |
+          echo "Installing Graphical Interface and Remote Desktop services..."
+          # Update package list silently
+          sudo apt-get update -qq
+          
+          # Install xfce4 (lightweight desktop) and xrdp (Remote Desktop Protocol)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xfce4 xfce4-goodies xrdp dbus-x11
+          
+          # Configure XRDP to use the XFCE desktop environment
+          echo "xfce4-session" | sudo tee /etc/xrdp/startwm.sh
+          sudo chmod +x /etc/xrdp/startwm.sh
+          sudo systemctl restart xrdp
+          sudo systemctl enable xrdp
+          echo "XRDP Server is now running on port 3389."
+
+      - name: 🟢 STEP 4 - Create Secure RDP User
+        run: |
+          echo "Generating secure credentials..."
+          # Generate a random 12-character password
+          PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 12 | head -n 1)
+          USERNAME="AdminRDP"
+          
+          # Create the user and set the password
+          sudo useradd -m -s /bin/bash $USERNAME
+          echo "$USERNAME:$PASSWORD" | sudo chpasswd
+          sudo usermod -aG sudo $USERNAME
+          
+          # Save credentials to environment for the dashboard display
+          echo "RDP_USER=$USERNAME" >> $GITHUB_ENV
+          echo "RDP_PASS=$PASSWORD" >> $GITHUB_ENV
+          echo "Secure user $USERNAME created."
+
+      - name: 🟢 STEP 5 - Tailscale Mesh Network Integration
         run: |
           echo "Installing Tailscale Engine..."
           curl -fsSL https://tailscale.com/install.sh | sh
-
-      - name: 🟢 STEP 4 - Connect & Advertise Exit Node
-        run: |
+          
           echo "Authenticating to Mesh Network..."
           # Connects using your secret and tells Tailscale this is an Exit Node
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} \
-            --hostname=ubuntu-fast-node \
+            --hostname=ubuntu-workspace \
             --advertise-exit-node \
             --accept-routes \
             --reset
-          
-          echo "========================================================"
-          echo "🚀 NODE IS LIVE! IP: $(tailscale ip -4)"
-          echo "========================================================"
-          echo "1. Go to your Tailscale Admin Dashboard"
-          echo "2. Find 'ubuntu-fast-node'"
-          echo "3. Click 'Edit route settings' and check 'Use as exit node'"
-          echo "========================================================"
+            
+          # Fetch the assigned IP address
+          TS_IP=$(tailscale ip -4)
+          echo "TAILSCALE_IP=$TS_IP" >> $GITHUB_ENV
+          echo "Node successfully integrated. IP: $TS_IP"
 
-      - name: 🟢 STEP 5 - Unlimited Heartbeat Loop
+      - name: 🟢 STEP 6 - Connection Dashboard & Watchdog Loop
         run: |
-          echo "Starting connection heartbeat..."
-          # Keeps the server alive and prevents GitHub from killing it for being completely quiet
+          echo "=================================================="
+          echo "      UBUNTU RDP WORKSPACE IS ONLINE & READY      "
+          echo "=================================================="
+          echo "🖥️ CONNECT VIA MICROSOFT RD CLIENT ON YOUR PHONE"
+          echo "--------------------------------------------------"
+          echo "🌐 IP Address : $TAILSCALE_IP"
+          echo "👤 Username   : $RDP_USER"
+          echo "🔑 Password   : $RDP_PASS"
+          echo "=================================================="
+          echo "🚀 TO GET MAX SPEED ON YOUR POCO F7:"
+          echo "1. Go to Tailscale Admin Dashboard"
+          echo "2. Find 'ubuntu-workspace'"
+          echo "3. Click 'Edit route settings' -> Enable 'Use as exit node'"
+          echo "4. On your phone's Tailscale app, select this as your Exit Node."
+          echo "=================================================="
+          
+          # Keeps the server alive for GitHub's maximum duration
           count=0
           while true; do
-            echo "[$(date)] Node is active and routing traffic. Uptime: $((count * 5)) minutes."
+            echo "[$(date)] Heartbeat $count | RDP Active | Tunnel Active"
             sleep 300 # Sleep for 5 minutes
             count=$((count + 1))
-            
-            # Stop just before 6 hours to let the cron job restart it smoothly
-            if [ $count -ge 70 ]; then
-              echo "Approaching GitHub's 6-hour limit. Shutting down cleanly for scheduled restart."
-              break
-            fi
           done
