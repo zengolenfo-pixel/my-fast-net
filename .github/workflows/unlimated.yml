@@ -3,7 +3,7 @@ name: TS
 on:
   workflow_dispatch:
   schedule:
-    - cron: '13 */5 * * *'
+    - cron: '17 */5 * * *'
 
 jobs:
   exit:
@@ -17,10 +17,9 @@ jobs:
           sudo sysctl -w net.ipv4.tcp_rmem='4096 87380 2500000' net.ipv4.tcp_wmem='4096 65536 2500000'
           sudo sysctl -w net.ipv4.tcp_congestion_control=bbr net.core.default_qdisc=fq
           curl -fsSL https://tailscale.com/install.sh | sh
-          sudo tailscale up --authkey=${{ secrets.TS_KEY }} --hostname=ep-$R --advertise-exit-node --accept-routes --ephemeral --reset
+          sudo tailscale up --authkey=${{ secrets.TS_KEY }} --hostname=ep-$R --advertise-exit-node --accept-routes --reset
           sudo tailscale set --advertise-exit-node
           while true; do
-            tailscale status || sudo tailscale up --authkey=${{ secrets.TS_KEY }} --hostname=ep-$R --advertise-exit-node --accept-routes --ephemeral --reset
-            sudo sysctl -w net.ipv4.tcp_congestion_control=bbr >/dev/null 2>&1
+            tailscale status || sudo tailscale up --authkey=${{ secrets.TS_KEY }} --hostname=ep-$R --advertise-exit-node --accept-routes --reset
             sleep 240
           done
