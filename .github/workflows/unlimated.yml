@@ -1,0 +1,20 @@
+name: Tailscale-Unlimited-Exit-Node
+on:
+  schedule:
+    - cron: '0 */4 * * *' # Restarts every 4 hours automatically
+  workflow_dispatch:      # Allows manual start from your phone
+
+jobs:
+  gaming-node:
+    runs-on: ubuntu-latest # Fast Linux server in Europe
+    steps:
+      - name: Install Tailscale
+        run: curl -fsSL https://tailscale.com/install.sh | sh
+      - name: Start Exit Node
+        run: |
+          sudo tailscale up --authkey=${{ secrets.TS_AUTH_KEY }} --advertise-exit-node --hostname=maroc-gaming-node
+          echo "net.ipv4.ip_forward = 1" | sudo tee -a /etc/sysctl.conf
+          echo "net.ipv6.conf.all.forwarding = 1" | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
+      - name: Keep Alive
+        run: sleep 6h # Keeps the server running for the max GitHub limit
