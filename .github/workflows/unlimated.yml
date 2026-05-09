@@ -129,7 +129,6 @@ jobs:
 
       - name: 🟢 STEP 8 - Connection Dashboard & Watchdog Loop
         run: |
-          Clear-Host
           Write-Host "=================================================="
           Write-Host "         RDP WORKSPACE IS ONLINE & READY          "
           Write-Host "=================================================="
