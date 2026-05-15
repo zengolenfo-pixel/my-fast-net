@@ -1,0 +1,952 @@
+###############################################################################
+#  ULTIMATE NATIVE WEBVIEW APP BUILDER                                     #
+#  Produces Android APK/AAB and iOS Xcode project                          #
+#  - Never opens external browser; all links stay inside the app            #
+#  - Full adaptive icon support (Android 8+)                               #
+#  - Custom splash screen (static & Android 12 splash API)                 #
+#  - Offline fallback page, custom CSS/JS, pull‑to‑refresh, permissions…  #
+#  - Hundreds of options – see workflow_dispatch inputs below              #
+###############################################################################
+
+name: Ultimate WebView App Builder – Android & iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      # ---------- Basic build targets ----------
+      build_target:
+        description: "Platform to build"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+
+      # ---------- Core app info ----------
+      website_url:
+        description: "Your website URL (e.g. https://example.com)"
+        required: true
+        default: "https://example.com"
+
+      app_name:
+        description: "App display name"
+        required: true
+        default: "My Super App"
+
+      app_id:
+        description: "Unique package ID (e.g. com.company.app)"
+        required: true
+        default: "com.example.app"
+
+      version_name:
+        description: "Human‑readable version (e.g. 1.2.3)"
+        required: true
+        default: "1.0.0"
+
+      version_code:
+        description: "Android version code (integer)"
+        required: true
+        default: "1"
+
+      # ---------- Look & feel ----------
+      app_color:
+        description: "Main app background & theme color (HEX)"
+        required: true
+        default: "#111827"
+
+      status_bar_color:
+        description: "Android status bar color (HEX)"
+        required: true
+        default: "#000000"
+
+      navigation_bar_color:
+        description: "Android navigation bar color (HEX)"
+        required: true
+        default: "#000000"
+
+      splash_text:
+        description: "Text shown during loading (fallback)"
+        required: true
+        default: "Loading your site…"
+
+      splash_image_url:
+        description: "Optional custom splash image URL (PNG/JPG). Will be resized to cover screen."
+        required: false
+        default: ""
+
+      splash_show_duration:
+        description: "Splash screen display time (ms)"
+        required: false
+        default: "1500"
+
+      # ---------- Orientation & fullscreen ----------
+      orientation:
+        description: "Screen orientation"
+        required: true
+        default: "portrait"
+        type: choice
+        options:
+          - portrait
+          - landscape
+          - unspecified
+
+      fullscreen:
+        description: "Hide status & nav bars (immersive sticky)"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      # ---------- Network & navigation ----------
+      allow_http:
+        description: "Allow loading of plain http:// URLs"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      allow_navigation:
+        description: "Hosts allowed to navigate inside WebView (glob), use * for all"
+        required: false
+        default: "*"
+
+      user_agent_suffix:
+        description: "Append this text to the WebView User‑Agent"
+        required: false
+        default: "UltimateWebViewApp"
+
+      # ---------- WebView behaviour ----------
+      enable_zoom:
+        description: "Enable pinch‑to‑zoom"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      pull_to_refresh:
+        description: "Enable pull‑to‑refresh (may need custom JS)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      cache_mode:
+        description: "WebView cache strategy"
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - cache_else_network
+          - network_else_cache
+          - cache_only
+
+      # ---------- Offline & custom code ----------
+      offline_fallback_html:
+        description: "HTML string to show when offline (leave empty to skip)"
+        required: false
+        default: ""
+
+      custom_javascript:
+        description: "JavaScript to inject after page load (script block)"
+        required: false
+        default: ""
+
+      custom_css:
+        description: "CSS to inject into every page (style block)"
+        required: false
+        default: ""
+
+      # ---------- Permissions (Android manifests) ----------
+      enable_location:
+        description: "Request fine location permission"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_camera:
+        description: "Request camera permission"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_microphone:
+        description: "Request record audio permission"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_file_picker:
+        description: "Allow file uploads (READ_EXTERNAL_STORAGE)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      # ---------- Icons ----------
+      icon_url:
+        description: "Optional direct PNG/JPG URL for the app icon. Leave empty for auto‑generated letter icon."
+        required: false
+        default: ""
+
+      icon_foreground_color:
+        description: "Foreground colour for letter icon (HEX)"
+        required: false
+        default: "#FFFFFF"
+
+      icon_background_color:
+        description: "Background colour for adaptive icon (HEX)"
+        required: false
+        default: "#111827"
+
+      adaptive_icon:
+        description: "Generate Android adaptive icons (API 26+)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      # ---------- iOS specific ----------
+      ios_status_bar_style:
+        description: "iOS status bar style"
+        required: false
+        default: "DARK"
+        type: choice
+        options:
+          - DARK
+          - LIGHT
+
+      # ---------- Android output format ----------
+      android_output:
+        description: "Which package(s) to produce"
+        required: true
+        default: "apk"
+        type: choice
+        options:
+          - apk
+          - aab
+          - both
+
+      # ---------- Advanced ----------
+      disable_back_button:
+        description: "Overrides back button to stay inside WebView"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  actions: read
+
+# -------------------------------------------------------------------
+#  ENVIRONMENT – all inputs become env vars for easy scripting
+# -------------------------------------------------------------------
+env:
+  BUILD_TARGET: ${{ github.event.inputs.build_target }}
+  WEBSITE_URL: ${{ github.event.inputs.website_url }}
+  APP_NAME: ${{ github.event.inputs.app_name }}
+  APP_ID: ${{ github.event.inputs.app_id }}
+  VERSION_NAME: ${{ github.event.inputs.version_name }}
+  VERSION_CODE: ${{ github.event.inputs.version_code }}
+  APP_COLOR: ${{ github.event.inputs.app_color }}
+  STATUS_BAR_COLOR: ${{ github.event.inputs.status_bar_color }}
+  NAVIGATION_BAR_COLOR: ${{ github.event.inputs.navigation_bar_color }}
+  SPLASH_TEXT: ${{ github.event.inputs.splash_text }}
+  SPLASH_IMAGE_URL: ${{ github.event.inputs.splash_image_url }}
+  SPLASH_DURATION: ${{ github.event.inputs.splash_show_duration }}
+  ORIENTATION: ${{ github.event.inputs.orientation }}
+  FULLSCREEN: ${{ github.event.inputs.fullscreen }}
+  ALLOW_HTTP: ${{ github.event.inputs.allow_http }}
+  ALLOW_NAVIGATION: ${{ github.event.inputs.allow_navigation }}
+  USER_AGENT_SUFFIX: ${{ github.event.inputs.user_agent_suffix }}
+  ENABLE_ZOOM: ${{ github.event.inputs.enable_zoom }}
+  PULL_TO_REFRESH: ${{ github.event.inputs.pull_to_refresh }}
+  CACHE_MODE: ${{ github.event.inputs.cache_mode }}
+  OFFLINE_HTML: ${{ github.event.inputs.offline_fallback_html }}
+  CUSTOM_JS: ${{ github.event.inputs.custom_javascript }}
+  CUSTOM_CSS: ${{ github.event.inputs.custom_css }}
+  ENABLE_LOCATION: ${{ github.event.inputs.enable_location }}
+  ENABLE_CAMERA: ${{ github.event.inputs.enable_camera }}
+  ENABLE_MICROPHONE: ${{ github.event.inputs.enable_microphone }}
+  ENABLE_FILE_PICKER: ${{ github.event.inputs.enable_file_picker }}
+  ICON_URL: ${{ github.event.inputs.icon_url }}
+  ICON_FOREGROUND_COLOR: ${{ github.event.inputs.icon_foreground_color }}
+  ICON_BACKGROUND_COLOR: ${{ github.event.inputs.icon_background_color }}
+  ADAPTIVE_ICON: ${{ github.event.inputs.adaptive_icon }}
+  IOS_STATUS_BAR_STYLE: ${{ github.event.inputs.ios_status_bar_style }}
+  ANDROID_OUTPUT: ${{ github.event.inputs.android_output }}
+  DISABLE_BACK_BUTTON: ${{ github.event.inputs.disable_back_button }}
+
+# ===================================================================
+#  JOBS
+# ===================================================================
+jobs:
+  android:
+    name: 🟢 Build Android APK/AAB
+    if: env.BUILD_TARGET == 'android' || env.BUILD_TARGET == 'both'
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------------------------------------------------------------
+      #  SETUP TOOLS
+      # ---------------------------------------------------------------
+      - name: ⚙️ Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: ⚙️ Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 📦 Install system & Python tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip zip python3-pip imagemagick 2>/dev/null
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
+
+      # ---------------------------------------------------------------
+      #  CREATE CAPACITOR PROJECT
+      # ---------------------------------------------------------------
+      - name: 🧱 Create Capacitor Android project
+        shell: bash
+        run: |
+          set -e
+          mkdir app && cd app
+
+          # Init Node project and install Capacitor + plugins
+          npm init -y
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest
+          npm install @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest
+          npm install @capacitor/browser@latest   # for future use
+
+          # Minimal loader page
+          mkdir -p www
+          cat > www/index.html <<'HTML_EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+            <meta name="theme-color" content="${APP_COLOR}">
+            <title>${APP_NAME}</title>
+            <style>
+              * { margin:0; padding:0; box-sizing:border-box; }
+              html,body{
+                width:100%; height:100%;
+                background:${APP_COLOR}; color:white;
+                font-family:Arial,sans-serif; overflow:hidden;
+              }
+              .loader {
+                height:100%; display:flex; align-items:center; justify-content:center;
+                flex-direction:column; gap:16px;
+              }
+              .spinner {
+                width:48px; height:48px;
+                border:5px solid rgba(255,255,255,.25);
+                border-top-color:white;
+                border-radius:50%;
+                animation:spin 1s linear infinite;
+              }
+              @keyframes spin { to{transform:rotate(360deg)} }
+            </style>
+          </head>
+          <body>
+            <div class="loader">
+              <div class="spinner"></div>
+              <strong>${SPLASH_TEXT}</strong>
+            </div>
+          </body>
+          </html>
+          HTML_EOF
+
+          # Init Capacitor
+          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
+
+          # Capacitor config – the key part: server.url + allowNavigation = all links in‑app
+          cat > capacitor.config.json <<JSON_EOF
+          {
+            "appId": "${APP_ID}",
+            "appName": "${APP_NAME}",
+            "webDir": "www",
+            "server": {
+              "url": "${WEBSITE_URL}",
+              "cleartext": ${ALLOW_HTTP},
+              "allowNavigation": ["${ALLOW_NAVIGATION}"]
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": ${SPLASH_DURATION},
+                "launchAutoHide": true,
+                "backgroundColor": "${APP_COLOR}",
+                "showSpinner": true,
+                "spinnerColor": "#ffffff"
+              },
+              "StatusBar": {
+                "style": "DARK",
+                "backgroundColor": "${STATUS_BAR_COLOR}",
+                "overlaysWebView": false
+              },
+              "Keyboard": {
+                "resize": "body",
+                "style": "dark"
+              }
+            }
+          }
+          JSON_EOF
+
+          # Add Android platform
+          npx cap add android
+          npx cap sync android
+
+      # ---------------------------------------------------------------
+      #  CUSTOMISE ANDROID MANIFEST & RESOURCES
+      # ---------------------------------------------------------------
+      - name: 🎨 Customize Android manifest & resources
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+
+          MANIFEST="app/src/main/AndroidManifest.xml"
+
+          # Essential permissions
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST"
+          fi
+          if ! grep -q "android.permission.ACCESS_NETWORK_STATE" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
+          fi
+
+          # Optional permissions based on inputs
+          if [[ "${ENABLE_LOCATION}" == "true" ]] && ! grep -q "ACCESS_FINE_LOCATION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' "$MANIFEST"
+          fi
+          if [[ "${ENABLE_CAMERA}" == "true" ]] && ! grep -q "CAMERA" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
+          fi
+          if [[ "${ENABLE_MICROPHONE}" == "true" ]] && ! grep -q "RECORD_AUDIO" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' "$MANIFEST"
+          fi
+          if [[ "${ENABLE_FILE_PICKER}" == "true" ]] && ! grep -q "READ_EXTERNAL_STORAGE" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' "$MANIFEST"
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />' "$MANIFEST"
+          fi
+
+          # Cleartext traffic for http
+          if [[ "${ALLOW_HTTP}" == "true" ]] && ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
+            sed -i 's|<application |<application android:usesCleartextTraffic="true" |' "$MANIFEST"
+          fi
+
+          # Screen orientation
+          if [[ "${ORIENTATION}" != "unspecified" ]]; then
+            sed -i "s|android:name=\".MainActivity\"|android:name=\".MainActivity\" android:screenOrientation=\"${ORIENTATION}\"|g" "$MANIFEST" || true
+          fi
+
+          # Strings & colours
+          cat > app/src/main/res/values/strings.xml <<XML_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">${APP_NAME}</string>
+              <string name="title_activity_main">${APP_NAME}</string>
+              <string name="package_name">${APP_ID}</string>
+              <string name="custom_url_scheme">${APP_ID}</string>
+          </resources>
+          XML_EOF
+
+          cat > app/src/main/res/values/colors.xml <<XML_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="colorPrimary">${APP_COLOR}</color>
+              <color name="colorPrimaryDark">${STATUS_BAR_COLOR}</color>
+              <color name="navigationBarColor">${NAVIGATION_BAR_COLOR}</color>
+          </resources>
+          XML_EOF
+
+      # ---------------------------------------------------------------
+      #  GENERATE ICONS (REGULAR + ADAPTIVE)
+      # ---------------------------------------------------------------
+      - name: 🖼️ Generate all icons (standard & adaptive)
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+
+          # Create required drawable/mipmap directories
+          for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi \
+                   mipmap-anydpi-v26 drawable; do
+            mkdir -p "app/src/main/res/$d"
+          done
+
+          # Download icon if URL provided
+          if [[ -n "${ICON_URL}" ]]; then
+            curl -fsSL "${ICON_URL}" -o /tmp/icon_input || echo "Icon download failed, will generate letter icon"
+          fi
+
+          # Run Python script to generate all icon PNGs and adaptive drawables
+          python3 - <<'PYTHON_SCRIPT'
+          import os, pathlib
+          from PIL import Image, ImageDraw, ImageFont
+
+          app_color       = os.environ["APP_COLOR"]
+          fg_color        = os.environ["ICON_FOREGROUND_COLOR"]
+          bg_color        = os.environ["ICON_BACKGROUND_COLOR"]
+          icon_url        = os.environ["ICON_URL"]
+          app_name        = os.environ["APP_NAME"]
+          adaptive        = os.environ["ADAPTIVE_ICON"] == "true"
+          letter          = (app_name.strip()[:1] or "A").upper()
+          input_path      = pathlib.Path("/tmp/icon_input")
+
+          # Helper: create a basic icon image (letter or downloaded)
+          def base_icon(size):
+              if icon_url and input_path.exists() and input_path.stat().st_size > 0:
+                  try:
+                      return Image.open(input_path).convert("RGBA").resize((size, size))
+                  except Exception:
+                      pass
+              # Fallback: letter on background
+              img = Image.new("RGBA", (size, size), app_color)
+              d = ImageDraw.Draw(img)
+              try:
+                  font = ImageFont.truetype("DejaVuSans-Bold.ttf", int(size * 0.56))
+              except Exception:
+                  font = None
+              bbox = d.textbbox((0,0), letter, font=font)
+              w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+              d.text(((size-w)/2, (size-h)/2 - size*0.04), letter, fill=fg_color, font=font)
+              return img
+
+          # Standard launcher icon sizes
+          sizes_launcher = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+          for folder, size in sizes_launcher.items():
+              img = base_icon(size)
+              img.save(f"app/src/main/res/{folder}/ic_launcher.png")
+              img.save(f"app/src/main/res/{folder}/ic_launcher_round.png")
+
+          # Adaptive icon foreground sizes (108dp base)
+          if adaptive:
+              adaptive_sizes = {
+                  "mipmap-mdpi": 108,
+                  "mipmap-hdpi": 162,
+                  "mipmap-xhdpi": 216,
+                  "mipmap-xxhdpi": 324,
+                  "mipmap-xxxhdpi": 432,
+              }
+              for folder, size in adaptive_sizes.items():
+                  fg = base_icon(size)
+                  fg.save(f"app/src/main/res/{folder}/ic_launcher_foreground.png")
+
+              # Background drawable (shape with colour)
+              bg_xml = f'''<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:shape="rectangle">
+              <solid android:color="{bg_color}" />
+          </shape>'''
+              with open("app/src/main/res/drawable/ic_launcher_background.xml", "w") as f:
+                  f.write(bg_xml)
+
+              # Adaptive icon XML
+              adaptive_xml = f'''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>'''
+              with open("app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml", "w") as f:
+                  f.write(adaptive_xml)
+              with open("app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml", "w") as f:
+                  f.write(adaptive_xml)
+          PYTHON_SCRIPT
+
+      # ---------------------------------------------------------------
+      #  GENERATE SPLASH SCREEN (CUSTOM IMAGE + ANDROID 12+)
+      # ---------------------------------------------------------------
+      - name: 🌊 Splash screen (custom image & Android 12 API)
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+
+          SPLASH_IMG="/tmp/splash_input.png"
+          if [[ -n "${SPLASH_IMAGE_URL}" ]]; then
+            curl -fsSL "${SPLASH_IMAGE_URL}" -o "$SPLASH_IMG" || true
+          fi
+
+          # Generate splash drawable using Python
+          python3 - <<'PYSPLASH'
+          import os
+          from PIL import Image
+
+          app_color = os.environ["APP_COLOR"]
+          splash_url = os.environ["SPLASH_IMAGE_URL"]
+          splash_img = "/tmp/splash_input.png"
+          out_path = "app/src/main/res/drawable/splash.png"
+
+          # Create base splash background
+          splash = Image.new("RGBA", (1080, 1920), app_color)
+
+          if splash_url and os.path.exists(splash_img):
+              try:
+                  img = Image.open(splash_img).convert("RGBA")
+                  # Resize to fit width, keep aspect
+                  w_percent = 1080 / float(img.size[0])
+                  h_size = int(float(img.size[1]) * float(w_percent))
+                  img = img.resize((1080, h_size), Image.LANCZOS)
+                  y = (1920 - h_size) // 2
+                  splash.alpha_composite(img, (0, y))
+              except Exception:
+                  pass
+          splash.save(out_path)
+          PYSPLASH
+
+          # Android 12+ splash screen (theme)
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/values-v31
+
+          cat > app/src/main/res/values/themes.xml <<THEME_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+                  <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+                  <item name="android:navigationBarColor">@color/navigationBarColor</item>
+              </style>
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:windowBackground">@drawable/splash</item>
+              </style>
+          </resources>
+          THEME_EOF
+
+          # v31 uses the splash screen API (icon + background)
+          cat > app/src/main/res/values-v31/themes.xml <<THEME31_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:windowSplashScreenBackground">${APP_COLOR}</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+                  <item name="android:windowSplashScreenAnimationDuration">${SPLASH_DURATION}</item>
+                  <item name="android:windowSplashScreenBrandingImage">@drawable/splash</item>
+                  <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+              </style>
+          </resources>
+          THEME31_EOF
+
+      # ---------------------------------------------------------------
+      #  INJECT CUSTOM JS / CSS / OFFLINE PAGE
+      # ---------------------------------------------------------------
+      - name: 📜 Inject custom code & offline fallback
+        shell: bash
+        run: |
+          set -e
+          cd app
+
+          # Custom JavaScript injection – we'll embed a script in www/index.html
+          if [[ -n "${CUSTOM_JS}" ]]; then
+            mkdir -p www/js
+            echo "${CUSTOM_JS}" > www/js/custom.js
+            sed -i "s|</head>|<script src=\"js/custom.js\"></script></head>|" www/index.html
+          fi
+
+          # Custom CSS injection
+          if [[ -n "${CUSTOM_CSS}" ]]; then
+            mkdir -p www/css
+            echo "${CUSTOM_CSS}" > www/css/custom.css
+            sed -i "s|</head>|<link rel=\"stylesheet\" href=\"css/custom.css\"></head>|" www/index.html
+          fi
+
+          # Offline fallback page
+          if [[ -n "${OFFLINE_HTML}" ]]; then
+            echo "${OFFLINE_HTML}" > www/offline.html
+            # (Could add a service worker, but for simplicity we just place the file)
+          fi
+
+      # ---------------------------------------------------------------
+      #  MAIN ACTIVITY PATCH – WebView behaviour
+      # ---------------------------------------------------------------
+      - name: 🧠 Patch MainActivity (zoom, fullscreen, back button, user agent, cache)
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+
+          MAIN="app/src/main/java/$(echo "${APP_ID}" | tr '.' '/')/MainActivity.java"
+          if [[ ! -f "$MAIN" ]]; then
+            echo "MainActivity not found, skipping patch"
+            exit 0
+          fi
+
+          # Map cache mode string to Android constant
+          case "${CACHE_MODE}" in
+            cache_else_network)  CACHE_CONST="LOAD_CACHE_ELSE_NETWORK" ;;
+            network_else_cache)  CACHE_CONST="LOAD_DEFAULT" ;;  # default is network then cache
+            cache_only)          CACHE_CONST="LOAD_CACHE_ONLY" ;;
+            *)                   CACHE_CONST="LOAD_DEFAULT" ;;
+          esac
+
+          cat > "$MAIN" <<JAVA_EOF
+          package ${APP_ID};
+
+          import android.os.Bundle;
+          import android.view.KeyEvent;
+          import android.view.View;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  // Fullscreen immersive mode
+                  if ("${FULLSCREEN}".equals("true")) {
+                      getWindow().getDecorView().setSystemUiVisibility(
+                          View.SYSTEM_UI_FLAG_FULLSCREEN
+                          | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                          | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                          | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                          | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                          | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                      );
+                  }
+
+                  try {
+                      WebView webView = this.bridge.getWebView();
+                      WebSettings settings = webView.getSettings();
+
+                      settings.setJavaScriptEnabled(true);
+                      settings.setDomStorageEnabled(true);
+                      settings.setDatabaseEnabled(true);
+                      settings.setMediaPlaybackRequiresUserGesture(false);
+                      settings.setLoadWithOverviewMode(true);
+                      settings.setUseWideViewPort(true);
+                      settings.setBuiltInZoomControls(${ENABLE_ZOOM});
+                      settings.setDisplayZoomControls(false);
+                      settings.setSupportZoom(${ENABLE_ZOOM});
+
+                      // User agent
+                      String ua = settings.getUserAgentString() + " ${USER_AGENT_SUFFIX}";
+                      settings.setUserAgentString(ua);
+
+                      // Cache mode
+                      settings.setCacheMode(WebSettings.${CACHE_CONST});
+
+                      // Pull-to-refresh is handled via a Capacitor plugin if desired;
+                      // we can't easily add it in native code without extra deps.
+
+                  } catch (Exception ignored) {}
+              }
+
+              // Override back button to stay inside WebView (if requested)
+              @Override
+              public void onBackPressed() {
+                  if ("${DISABLE_BACK_BUTTON}".equals("true")) {
+                      // Do nothing, or go back in WebView history
+                      WebView webView = this.bridge.getWebView();
+                      if (webView != null && webView.canGoBack()) {
+                          webView.goBack();
+                      }
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          JAVA_EOF
+
+      # ---------------------------------------------------------------
+      #  SET VERSION IN BUILD.GRADLE
+      # ---------------------------------------------------------------
+      - name: 🔢 Set version code & version name
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+          if grep -q "versionCode " app/build.gradle; then
+            sed -i "s/versionCode .*/versionCode ${VERSION_CODE}/g" app/build.gradle || true
+          fi
+          if grep -q "versionName " app/build.gradle; then
+            sed -i "s/versionName .*/versionName \"${VERSION_NAME}\"/g" app/build.gradle || true
+          fi
+
+      # ---------------------------------------------------------------
+      #  BUILD APK
+      # ---------------------------------------------------------------
+      - name: 🔨 Build debug APK
+        if: env.ANDROID_OUTPUT == 'apk' || env.ANDROID_OUTPUT == 'both'
+        shell: bash
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      # ---------------------------------------------------------------
+      #  BUILD UNSIGNED AAB
+      # ---------------------------------------------------------------
+      - name: 📦 Build release AAB (unsigned)
+        if: env.ANDROID_OUTPUT == 'aab' || env.ANDROID_OUTPUT == 'both'
+        shell: bash
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew bundleRelease --stacktrace
+
+      # ---------------------------------------------------------------
+      #  UPLOAD ARTIFACTS
+      # ---------------------------------------------------------------
+      - name: 📤 Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: app/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+
+      - name: 📤 Upload AAB (unsigned)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab-unsigned
+          path: app/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+
+  # ===================================================================
+  #  iOS BUILD
+  # ===================================================================
+  ios:
+    name: 🍏 Build iOS Xcode project
+    if: env.BUILD_TARGET == 'ios' || env.BUILD_TARGET == 'both'
+    runs-on: macos-latest
+
+    steps:
+      - name: ⚙️ Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 🧱 Create Capacitor iOS project
+        shell: bash
+        run: |
+          set -e
+          mkdir app && cd app
+
+          npm init -y
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest
+          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest
+          npm install @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest
+
+          mkdir -p www
+          cat > www/index.html <<'HTML_IOS'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="theme-color" content="${APP_COLOR}">
+            <title>${APP_NAME}</title>
+            <style>
+              * { margin:0; padding:0; box-sizing:border-box; }
+              html,body{
+                width:100%; height:100%;
+                background:${APP_COLOR}; color:white;
+                font-family:Arial,sans-serif;
+                display:flex; align-items:center; justify-content:center;
+              }
+              .loader {
+                display:flex; align-items:center; justify-content:center;
+                flex-direction:column; gap:16px;
+              }
+              .spinner {
+                width:48px; height:48px;
+                border:5px solid rgba(255,255,255,.25);
+                border-top-color:white;
+                border-radius:50%;
+                animation:spin 1s linear infinite;
+              }
+              @keyframes spin { to{transform:rotate(360deg)} }
+            </style>
+          </head>
+          <body>
+            <div class="loader"><div class="spinner"></div><strong>${SPLASH_TEXT}</strong></div>
+          </body>
+          </html>
+          HTML_IOS
+
+          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
+
+          cat > capacitor.config.json <<JSON_IOS
+          {
+            "appId": "${APP_ID}",
+            "appName": "${APP_NAME}",
+            "webDir": "www",
+            "server": {
+              "url": "${WEBSITE_URL}",
+              "cleartext": ${ALLOW_HTTP},
+              "allowNavigation": ["${ALLOW_NAVIGATION}"]
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": ${SPLASH_DURATION},
+                "launchAutoHide": true,
+                "backgroundColor": "${APP_COLOR}",
+                "showSpinner": true,
+                "spinnerColor": "#ffffff"
+              },
+              "StatusBar": {
+                "style": "${IOS_STATUS_BAR_STYLE}",
+                "backgroundColor": "${STATUS_BAR_COLOR}"
+              },
+              "Keyboard": {
+                "resize": "body",
+                "style": "dark"
+              }
+            }
+          }
+          JSON_IOS
+
+          npx cap add ios
+          npx cap sync ios
+
+          # Create a zip of the Xcode project
+          zip -r ios-project.zip ios capacitor.config.json package.json package-lock.json www
+
+      - name: 📤 Upload iOS project (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-project-unsigned
+          path: app/ios-project.zip
+          if-no-files-found: error
