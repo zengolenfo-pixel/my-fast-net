@@ -1,0 +1,698 @@
+name: Mega Website App Builder - Android iOS Windows Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Choose target"
+        required: true
+        default: "android-debug"
+        type: choice
+        options:
+          - android-debug
+          - android-release
+          - windows
+          - linux
+          - ios
+          - desktop-all
+          - all
+
+      website_url:
+        description: "Website URL"
+        required: true
+        default: "https://example.com"
+
+      app_name:
+        description: "App display name"
+        required: true
+        default: "My Website App"
+
+      app_id:
+        description: "Package ID example com.yourname.app"
+        required: true
+        default: "com.example.app"
+
+      version_name:
+        description: "Version name"
+        required: true
+        default: "1.0.0"
+
+      version_code:
+        description: "Android version code"
+        required: true
+        default: "1"
+
+      icon_url:
+        description: "Direct icon image URL, optional"
+        required: false
+        default: ""
+
+      splash_text:
+        description: "Loading text"
+        required: true
+        default: "Loading..."
+
+      app_color:
+        description: "Main HEX color"
+        required: true
+        default: "#111827"
+
+      status_bar_color:
+        description: "Android status bar HEX"
+        required: true
+        default: "#000000"
+
+      navigation_bar_color:
+        description: "Android navigation bar HEX"
+        required: true
+        default: "#000000"
+
+      orientation:
+        description: "Android orientation"
+        required: true
+        default: "portrait"
+        type: choice
+        options:
+          - portrait
+          - landscape
+          - unspecified
+
+      android_build_mode:
+        description: "Android output"
+        required: true
+        default: "apk"
+        type: choice
+        options:
+          - apk
+          - aab
+          - both
+
+      fullscreen:
+        description: "Fullscreen Android"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      allow_http:
+        description: "Allow non HTTPS"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_zoom:
+        description: "Enable Android WebView zoom"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      user_agent_suffix:
+        description: "Extra User-Agent text"
+        required: false
+        default: "MegaWebsiteApp"
+
+      desktop_width:
+        description: "Desktop width"
+        required: true
+        default: "1200"
+
+      desktop_height:
+        description: "Desktop height"
+        required: true
+        default: "800"
+
+      desktop_resizable:
+        description: "Desktop resizable"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      desktop_fullscreen:
+        description: "Desktop fullscreen"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  WEBSITE_URL: ${{ github.event.inputs.website_url }}
+  APP_NAME: ${{ github.event.inputs.app_name }}
+  APP_ID: ${{ github.event.inputs.app_id }}
+  VERSION_NAME: ${{ github.event.inputs.version_name }}
+  VERSION_CODE: ${{ github.event.inputs.version_code }}
+  ICON_URL: ${{ github.event.inputs.icon_url }}
+  SPLASH_TEXT: ${{ github.event.inputs.splash_text }}
+  APP_COLOR: ${{ github.event.inputs.app_color }}
+  STATUS_BAR_COLOR: ${{ github.event.inputs.status_bar_color }}
+  NAVIGATION_BAR_COLOR: ${{ github.event.inputs.navigation_bar_color }}
+  ORIENTATION: ${{ github.event.inputs.orientation }}
+  FULLSCREEN: ${{ github.event.inputs.fullscreen }}
+  ALLOW_HTTP: ${{ github.event.inputs.allow_http }}
+  ENABLE_ZOOM: ${{ github.event.inputs.enable_zoom }}
+  USER_AGENT_SUFFIX: ${{ github.event.inputs.user_agent_suffix }}
+  DESKTOP_WIDTH: ${{ github.event.inputs.desktop_width }}
+  DESKTOP_HEIGHT: ${{ github.event.inputs.desktop_height }}
+  DESKTOP_RESIZABLE: ${{ github.event.inputs.desktop_resizable }}
+  DESKTOP_FULLSCREEN: ${{ github.event.inputs.desktop_fullscreen }}
+
+jobs:
+  android:
+    name: Build Android APK AAB
+    if: github.event.inputs.target == 'android-debug' || github.event.inputs.target == 'android-release' || github.event.inputs.target == 'all'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip zip python3-pip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
+
+      - name: Create Capacitor Android project
+        shell: bash
+        run: |
+          set -e
+          mkdir app
+          cd app
+          npm init -y
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest
+
+          mkdir -p www
+
+          cat > www/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+            <meta name="theme-color" content="${APP_COLOR}">
+            <title>${APP_NAME}</title>
+            <style>
+              html,body{margin:0;width:100%;height:100%;background:${APP_COLOR};color:white;font-family:Arial,sans-serif;overflow:hidden}
+              .loader{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+              .spinner{width:48px;height:48px;border:5px solid rgba(255,255,255,.25);border-top-color:white;border-radius:50%;animation:spin 1s linear infinite}
+              @keyframes spin{to{transform:rotate(360deg)}}
+            </style>
+          </head>
+          <body>
+            <div class="loader"><div class="spinner"></div><strong>${SPLASH_TEXT}</strong></div>
+          </body>
+          </html>
+          EOF
+
+          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
+
+          cat > capacitor.config.json <<EOF
+          {
+            "appId": "${APP_ID}",
+            "appName": "${APP_NAME}",
+            "webDir": "www",
+            "server": {
+              "url": "${WEBSITE_URL}",
+              "cleartext": ${ALLOW_HTTP}
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": 1500,
+                "launchAutoHide": true,
+                "backgroundColor": "${APP_COLOR}",
+                "showSpinner": true,
+                "spinnerColor": "#ffffff"
+              },
+              "StatusBar": {
+                "style": "DARK",
+                "backgroundColor": "${STATUS_BAR_COLOR}",
+                "overlaysWebView": false
+              },
+              "Keyboard": {
+                "resize": "body",
+                "style": "dark"
+              }
+            }
+          }
+          EOF
+
+          npx cap add android
+          npx cap sync android
+
+      - name: Customize Android project
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+
+          MANIFEST="app/src/main/AndroidManifest.xml"
+
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST"
+          fi
+
+          if ! grep -q "android.permission.ACCESS_NETWORK_STATE" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
+          fi
+
+          if [[ "${ALLOW_HTTP}" == "true" ]] && ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
+            sed -i 's/<application /<application android:usesCleartextTraffic="true" /' "$MANIFEST"
+          fi
+
+          if [[ "${ORIENTATION}" != "unspecified" ]]; then
+            sed -i "s|android:name=\".MainActivity\"|android:name=\".MainActivity\" android:screenOrientation=\"${ORIENTATION}\"|g" "$MANIFEST" || true
+          fi
+
+          cat > app/src/main/res/values/strings.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">${APP_NAME}</string>
+              <string name="title_activity_main">${APP_NAME}</string>
+              <string name="package_name">${APP_ID}</string>
+              <string name="custom_url_scheme">${APP_ID}</string>
+          </resources>
+          EOF
+
+          cat > app/src/main/res/values/colors.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="colorPrimary">${APP_COLOR}</color>
+              <color name="colorPrimaryDark">${STATUS_BAR_COLOR}</color>
+              <color name="navigationBarColor">${NAVIGATION_BAR_COLOR}</color>
+          </resources>
+          EOF
+
+      - name: Generate Android icons
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+          mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi app/src/main/res/drawable
+
+          if [[ -n "${ICON_URL}" ]]; then
+            curl -L "${ICON_URL}" -o /tmp/icon_input || true
+          fi
+
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw, ImageFont
+          import os, pathlib
+
+          app_color = os.environ.get("APP_COLOR", "#111827")
+          app_name = os.environ.get("APP_NAME", "App")
+          icon_url = os.environ.get("ICON_URL", "")
+          letter = (app_name.strip()[:1] or "A").upper()
+
+          def make_icon(size):
+              p = pathlib.Path("/tmp/icon_input")
+              if icon_url and p.exists() and p.stat().st_size > 0:
+                  try:
+                      return Image.open(p).convert("RGBA").resize((size, size))
+                  except Exception:
+                      pass
+              img = Image.new("RGBA", (size, size), app_color)
+              d = ImageDraw.Draw(img)
+              try:
+                  font = ImageFont.truetype("DejaVuSans-Bold.ttf", int(size * 0.56))
+              except Exception:
+                  font = None
+              bbox = d.textbbox((0, 0), letter, font=font)
+              w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+              d.text(((size-w)/2, (size-h)/2 - size*0.04), letter, fill="white", font=font)
+              return img
+
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in sizes.items():
+              img = make_icon(size)
+              img.save(f"app/src/main/res/{folder}/ic_launcher.png")
+              img.save(f"app/src/main/res/{folder}/ic_launcher_round.png")
+
+          splash = Image.new("RGBA", (1080, 1920), app_color)
+          icon = make_icon(360)
+          splash.alpha_composite(icon, ((1080-360)//2, (1920-360)//2))
+          splash.save("app/src/main/res/drawable/splash.png")
+          PY
+
+      - name: Patch MainActivity WebView settings
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+          MAIN="app/src/main/java/$(echo "${APP_ID}" | tr '.' '/')/MainActivity.java"
+
+          if [[ -f "$MAIN" ]]; then
+            cat > "$MAIN" <<EOF
+          package ${APP_ID};
+
+          import android.os.Bundle;
+          import android.view.View;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  if ("${FULLSCREEN}".equals("true")) {
+                      getWindow().getDecorView().setSystemUiVisibility(
+                          View.SYSTEM_UI_FLAG_FULLSCREEN
+                          | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                          | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                          | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                          | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                          | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                      );
+                  }
+
+                  try {
+                      WebView webView = this.bridge.getWebView();
+                      WebSettings settings = webView.getSettings();
+                      settings.setJavaScriptEnabled(true);
+                      settings.setDomStorageEnabled(true);
+                      settings.setDatabaseEnabled(true);
+                      settings.setMediaPlaybackRequiresUserGesture(false);
+                      settings.setLoadWithOverviewMode(true);
+                      settings.setUseWideViewPort(true);
+                      settings.setBuiltInZoomControls(${ENABLE_ZOOM});
+                      settings.setDisplayZoomControls(false);
+                      settings.setSupportZoom(${ENABLE_ZOOM});
+                      settings.setUserAgentString(settings.getUserAgentString() + " ${USER_AGENT_SUFFIX}");
+                  } catch (Exception ignored) {}
+              }
+          }
+          EOF
+          fi
+
+      - name: Set Android version
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+
+          if grep -q "versionCode" app/build.gradle; then
+            sed -i "s/versionCode .*/versionCode ${VERSION_CODE}/g" app/build.gradle || true
+          fi
+
+          if grep -q "versionName" app/build.gradle; then
+            sed -i "s/versionName .*/versionName \"${VERSION_NAME}\"/g" app/build.gradle || true
+          fi
+
+      - name: Build Android APK
+        if: github.event.inputs.android_build_mode == 'apk' || github.event.inputs.android_build_mode == 'both' || github.event.inputs.target == 'android-debug'
+        shell: bash
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Build Android unsigned AAB
+        if: github.event.inputs.android_build_mode == 'aab' || github.event.inputs.android_build_mode == 'both' || github.event.inputs.target == 'android-release' || github.event.inputs.target == 'all'
+        shell: bash
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew bundleRelease --stacktrace
+
+      - name: Upload Android APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: app/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+
+      - name: Upload Android AAB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab-unsigned
+          path: app/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+
+  windows:
+    name: Build Windows EXE
+    if: github.event.inputs.target == 'windows' || github.event.inputs.target == 'desktop-all' || github.event.inputs.target == 'all'
+    runs-on: windows-latest
+
+    steps:
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create Electron Windows app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path desktop -Force | Out-Null
+          Set-Location desktop
+
+          @"
+          {
+            "name": "website-desktop-app",
+            "version": "$env:VERSION_NAME",
+            "description": "$env:APP_NAME",
+            "homepage": "$env:WEBSITE_URL",
+            "author": {
+              "name": "App Builder",
+              "email": "builder@example.com"
+            },
+            "main": "main.js",
+            "scripts": {
+              "dist": "electron-builder --win nsis portable"
+            },
+            "devDependencies": {
+              "electron": "latest",
+              "electron-builder": "latest"
+            },
+            "build": {
+              "appId": "$env:APP_ID",
+              "productName": "$env:APP_NAME",
+              "directories": {
+                "output": "dist"
+              },
+              "win": {
+                "target": ["nsis", "portable"]
+              }
+            }
+          }
+          "@ | Set-Content -Encoding UTF8 package.json
+
+          @"
+          const { app, BrowserWindow } = require('electron');
+
+          function createWindow() {
+            const win = new BrowserWindow({
+              width: Number(process.env.DESKTOP_WIDTH || 1200),
+              height: Number(process.env.DESKTOP_HEIGHT || 800),
+              resizable: process.env.DESKTOP_RESIZABLE === 'true',
+              fullscreen: process.env.DESKTOP_FULLSCREEN === 'true',
+              title: process.env.APP_NAME || 'Website App',
+              webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true
+              }
+            });
+
+            win.loadURL(process.env.WEBSITE_URL || 'https://example.com');
+          }
+
+          app.whenReady().then(createWindow);
+          app.on('window-all-closed', () => {
+            if (process.platform !== 'darwin') app.quit();
+          });
+          "@ | Set-Content -Encoding UTF8 main.js
+
+          npm install
+          npm run dist
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: desktop/dist/*.exe
+          if-no-files-found: ignore
+
+  linux:
+    name: Build Linux AppImage DEB
+    if: github.event.inputs.target == 'linux' || github.event.inputs.target == 'desktop-all' || github.event.inputs.target == 'all'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create Electron Linux app
+        shell: bash
+        run: |
+          set -e
+          mkdir desktop
+          cd desktop
+
+          cat > package.json <<EOF
+          {
+            "name": "website-desktop-app",
+            "version": "${VERSION_NAME}",
+            "description": "${APP_NAME}",
+            "homepage": "${WEBSITE_URL}",
+            "author": {
+              "name": "App Builder",
+              "email": "builder@example.com"
+            },
+            "main": "main.js",
+            "scripts": {
+              "dist": "electron-builder --linux AppImage deb"
+            },
+            "devDependencies": {
+              "electron": "latest",
+              "electron-builder": "latest"
+            },
+            "build": {
+              "appId": "${APP_ID}",
+              "productName": "${APP_NAME}",
+              "directories": {
+                "output": "dist"
+              },
+              "linux": {
+                "target": ["AppImage", "deb"],
+                "category": "Utility",
+                "maintainer": "App Builder <builder@example.com>"
+              }
+            }
+          }
+          EOF
+
+          cat > main.js <<EOF
+          const { app, BrowserWindow } = require('electron');
+
+          function createWindow() {
+            const win = new BrowserWindow({
+              width: Number(process.env.DESKTOP_WIDTH || 1200),
+              height: Number(process.env.DESKTOP_HEIGHT || 800),
+              resizable: process.env.DESKTOP_RESIZABLE === 'true',
+              fullscreen: process.env.DESKTOP_FULLSCREEN === 'true',
+              title: process.env.APP_NAME || 'Website App',
+              webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true
+              }
+            });
+
+            win.loadURL(process.env.WEBSITE_URL || 'https://example.com');
+          }
+
+          app.whenReady().then(createWindow);
+          app.on('window-all-closed', () => {
+            if (process.platform !== 'darwin') app.quit();
+          });
+          EOF
+
+          npm install
+          npm run dist
+
+      - name: Upload Linux builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage-deb
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          if-no-files-found: ignore
+
+  ios:
+    name: Build iOS Project Zip
+    if: github.event.inputs.target == 'ios' || github.event.inputs.target == 'all'
+    runs-on: macos-latest
+
+    steps:
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create Capacitor iOS project
+        shell: bash
+        run: |
+          set -e
+          mkdir app
+          cd app
+          npm init -y
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest
+          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest @capacitor/app@latest
+
+          mkdir -p www
+          cat > www/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${APP_NAME}</title>
+            <style>
+              html,body{margin:0;width:100%;height:100%;background:${APP_COLOR};color:white;font-family:Arial;display:flex;align-items:center;justify-content:center}
+            </style>
+          </head>
+          <body><strong>${SPLASH_TEXT}</strong></body>
+          </html>
+          EOF
+
+          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
+
+          cat > capacitor.config.json <<EOF
+          {
+            "appId": "${APP_ID}",
+            "appName": "${APP_NAME}",
+            "webDir": "www",
+            "server": {
+              "url": "${WEBSITE_URL}",
+              "cleartext": ${ALLOW_HTTP}
+            }
+          }
+          EOF
+
+          npx cap add ios
+          npx cap sync ios
+          zip -r ios-project.zip ios capacitor.config.json package.json www
+
+      - name: Upload iOS project
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-project-unsigned
+          path: app/ios-project.zip
+          if-no-files-found: ignore
