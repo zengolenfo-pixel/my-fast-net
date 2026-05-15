@@ -1,0 +1,79 @@
+name: Website To APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      website_url:
+        description: "Website URL"
+        required: true
+        default: "https://example.com"
+      app_name:
+        description: "App name"
+        required: true
+        default: "My Website App"
+      app_id:
+        description: "Package ID"
+        required: true
+        default: "com.example.app"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create Capacitor project
+        run: |
+          mkdir app
+          cd app
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+          mkdir www
+          cat > www/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${{ github.event.inputs.app_name }}</title>
+            <style>
+              html, body, iframe {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+                overflow: hidden;
+              }
+            </style>
+          </head>
+          <body>
+            <iframe src="${{ github.event.inputs.website_url }}"></iframe>
+          </body>
+          </html>
+          EOF
+
+          npx cap init "${{ github.event.inputs.app_name }}" "${{ github.event.inputs.app_id }}" --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-app-apk
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
