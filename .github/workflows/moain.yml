@@ -1,1047 +1,481 @@
 ###############################################################################
-#                                                                             #
-#         ULTIMATE NATIVE WEBVIEW APP BUILDER - PRODUCTION EDITION            #
-#         Android APK / AAB + iOS Xcode Project - Maximum Stability           #
-#                                                                             #
-#         Created by Zygor - Instagram @zygorlap                              #
-#         GitHub Actions Capacitor Workflow - Enterprise Grade                #
-#                                                                             #
-#  NOTE: GitHub limits workflow_dispatch to 25 inputs.                        #
-#  Related settings are bundled as JSON strings and parsed in the             #
-#  validate job, then re-exported as individual env vars for all steps.       #
-#                                                                             #
+#  ULTIMATE NATIVE WEBVIEW APP BUILDER                                     #
+#  Produces Android APK/AAB and iOS Xcode project                          #
+#  - Never opens external browser; all links stay inside the app            #
+#  - Full adaptive icon support (Android 8+)                               #
+#  - Custom splash screen (static & Android 12 splash API)                 #
+#  - Offline fallback page, custom CSS/JS, pull‑to‑refresh, permissions…  #
+#  - Hundreds of options – see workflow_dispatch inputs below              #
 ###############################################################################
 
-name: Ultimate WebView App Builder - Android and iOS - By Zygor
+name: Ultimate WebView App Builder – Android & iOS
 
 on:
   workflow_dispatch:
     inputs:
-
-      # ── INPUT 1 ─────────────────────────────────────────────────────────────
+      # ---------- Basic build targets ----------
       build_target:
         description: "Platform to build"
         required: true
         default: "android"
         type: choice
-        options: [android, ios, both]
+        options:
+          - android
+          - ios
+          - both
 
-      # ── INPUT 2 ─────────────────────────────────────────────────────────────
-      android_output:
-        description: "Android package type"
-        required: true
-        default: "apk"
-        type: choice
-        options: [apk, aab, both]
-
-      # ── INPUT 3 ─────────────────────────────────────────────────────────────
-      build_type:
-        description: "Build type (debug = unsigned/fast, release = signed/optimised)"
-        required: true
-        default: "debug"
-        type: choice
-        options: [debug, release, both]
-
-      # ── INPUT 4 ─────────────────────────────────────────────────────────────
+      # ---------- Core app info ----------
       website_url:
-        description: "Website URL to load (must start with https:// or http://)"
+        description: "Your website URL (e.g. https://example.com)"
         required: true
         default: "https://example.com"
 
-      # ── INPUT 5 ─────────────────────────────────────────────────────────────
       app_name:
-        description: "Display name shown under the app icon"
+        description: "App display name"
         required: true
-        default: "My App"
+        default: "My Super App"
 
-      # ── INPUT 6 ─────────────────────────────────────────────────────────────
       app_id:
-        description: "Reverse-domain package ID (e.g. com.company.appname)"
+        description: "Unique package ID (e.g. com.company.app)"
         required: true
-        default: "com.example.myapp"
+        default: "com.example.app"
 
-      # ── INPUT 7 ─────────────────────────────────────────────────────────────
-      version_info:
-        description: |
-          Version info JSON — version_name, version_code, min_sdk, target_sdk, compile_sdk
-          Example: {"version_name":"1.0.0","version_code":"1","min_sdk":"24","target_sdk":"35","compile_sdk":"35"}
+      version_name:
+        description: "Human‑readable version (e.g. 1.2.3)"
         required: true
-        default: '{"version_name":"1.0.0","version_code":"1","min_sdk":"24","target_sdk":"35","compile_sdk":"35"}'
+        default: "1.0.0"
 
-      # ── INPUT 8 ─────────────────────────────────────────────────────────────
-      theme_colors:
-        description: |
-          Theme colours JSON — app_color, app_color_secondary, status_bar_color, status_bar_style (light|dark),
-          navigation_bar_color, navigation_bar_style (light|dark), dark_mode_support (true|false)
+      version_code:
+        description: "Android version code (integer)"
         required: true
-        default: '{"app_color":"#111827","app_color_secondary":"#1F2937","status_bar_color":"#000000","status_bar_style":"light","navigation_bar_color":"#000000","navigation_bar_style":"light","dark_mode_support":"true"}'
+        default: "1"
 
-      # ── INPUT 9 ─────────────────────────────────────────────────────────────
-      splash_settings:
-        description: |
-          Splash screen JSON — text, image_url, show_duration_ms, fade_duration_ms,
-          animation (fade|slide|zoom|none), loading_style (spinner|dots|bar|none)
+      # ---------- Look & feel ----------
+      app_color:
+        description: "Main app background & theme color (HEX)"
         required: true
-        default: '{"text":"Loading...","image_url":"","show_duration_ms":"2000","fade_duration_ms":"300","animation":"fade","loading_style":"spinner"}'
+        default: "#111827"
 
-      # ── INPUT 10 ────────────────────────────────────────────────────────────
-      display_settings:
-        description: |
-          Display JSON — orientation (portrait|landscape|sensorPortrait|sensorLandscape|sensor|unspecified),
-          fullscreen (true|false), keep_screen_on (true|false)
+      status_bar_color:
+        description: "Android status bar color (HEX)"
         required: true
-        default: '{"orientation":"portrait","fullscreen":"false","keep_screen_on":"false"}'
+        default: "#000000"
 
-      # ── INPUT 11 ────────────────────────────────────────────────────────────
-      network_settings:
-        description: |
-          Network JSON — allow_http, allow_navigation, external_links (block|system_browser|in_app_browser),
-          user_agent_suffix, ssl_error_handling (strict|permissive), mixed_content,
-          deep_link_scheme, deep_link_host, custom_headers
+      navigation_bar_color:
+        description: "Android navigation bar color (HEX)"
         required: true
-        default: '{"allow_http":"false","allow_navigation":"*","external_links":"block","user_agent_suffix":"UltimateWebViewApp/1.0 Zygor/@zygorlap","ssl_error_handling":"strict","mixed_content":"false","deep_link_scheme":"","deep_link_host":"","custom_headers":""}'
+        default: "#000000"
 
-      # ── INPUT 12 ────────────────────────────────────────────────────────────
-      webview_behavior:
-        description: |
-          WebView behaviour JSON — enable_zoom, pull_to_refresh, pull_to_refresh_color,
-          cache_mode (default|cache_else_network|network_else_cache|cache_only|no_cache),
-          hardware_acceleration, media_autoplay, dom_storage, cookie_persistence,
-          service_worker, pwa_detection, safe_area, disable_back_button
+      splash_text:
+        description: "Text shown during loading (fallback)"
         required: true
-        default: '{"enable_zoom":"false","pull_to_refresh":"false","pull_to_refresh_color":"#FFFFFF","cache_mode":"default","hardware_acceleration":"true","media_autoplay":"true","dom_storage":"true","cookie_persistence":"true","service_worker":"true","pwa_detection":"true","safe_area":"true","disable_back_button":"true"}'
+        default: "Loading your site…"
 
-      # ── INPUT 13 ────────────────────────────────────────────────────────────
-      offline_settings:
-        description: |
-          Offline JSON — fallback_html, retry_interval_seconds, network_error_message
+      splash_image_url:
+        description: "Optional custom splash image URL (PNG/JPG). Will be resized to cover screen."
         required: false
-        default: '{"fallback_html":"","retry_interval_seconds":"5","network_error_message":"No internet connection. Please check your network and try again."}'
+        default: ""
 
-      # ── INPUT 14 ────────────────────────────────────────────────────────────
-      code_injection:
-        description: |
-          Code injection JSON — custom_javascript, custom_css, custom_font_url
+      splash_show_duration:
+        description: "Splash screen display time (ms)"
         required: false
-        default: '{"custom_javascript":"","custom_css":"","custom_font_url":""}'
+        default: "1500"
 
-      # ── INPUT 15 ────────────────────────────────────────────────────────────
-      permissions:
-        description: |
-          Permissions JSON — location, camera, microphone, file_picker,
-          downloads, notifications, bluetooth, nfc  (all "true" or "false")
+      # ---------- Orientation & fullscreen ----------
+      orientation:
+        description: "Screen orientation"
+        required: true
+        default: "portrait"
+        type: choice
+        options:
+          - portrait
+          - landscape
+          - unspecified
+
+      fullscreen:
+        description: "Hide status & nav bars (immersive sticky)"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      # ---------- Network & navigation ----------
+      allow_http:
+        description: "Allow loading of plain http:// URLs"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      allow_navigation:
+        description: "Hosts allowed to navigate inside WebView (glob), use * for all"
         required: false
-        default: '{"location":"false","camera":"false","microphone":"false","file_picker":"false","downloads":"false","notifications":"false","bluetooth":"false","nfc":"false"}'
+        default: "*"
 
-      # ── INPUT 16 ────────────────────────────────────────────────────────────
-      icon_settings:
-        description: |
-          Icon JSON — icon_url, foreground_color, background_color, adaptive, monochrome
+      user_agent_suffix:
+        description: "Append this text to the WebView User‑Agent"
         required: false
-        default: '{"icon_url":"","foreground_color":"#FFFFFF","background_color":"#111827","adaptive":"true","monochrome":"true"}'
+        default: "UltimateWebViewApp"
 
-      # ── INPUT 17 ────────────────────────────────────────────────────────────
-      signing_settings:
-        description: |
-          Signing JSON — keystore_base64 (base64 content or ""), keystore_password, key_alias, key_password
-        required: false
-        default: '{"keystore_base64":"","keystore_password":"android","key_alias":"release","key_password":"android"}'
+      # ---------- WebView behaviour ----------
+      enable_zoom:
+        description: "Enable pinch‑to‑zoom"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
-      # ── INPUT 18 ────────────────────────────────────────────────────────────
-      build_options:
-        description: |
-          Build options JSON — proguard_enabled, multidex_enabled, resource_shrinking,
-          abi_filters (e.g. "armeabi-v7a,arm64-v8a"), split_apks
-        required: false
-        default: '{"proguard_enabled":"true","multidex_enabled":"true","resource_shrinking":"true","abi_filters":"armeabi-v7a,arm64-v8a","split_apks":"false"}'
-
-      # ── INPUT 19 ────────────────────────────────────────────────────────────
-      ios_settings:
-        description: |
-          iOS options JSON — status_bar_style (DARK|LIGHT|DEFAULT), deployment_target,
-          background_modes (comma-separated: audio,location,fetch or ""), ats_allow_all
-        required: false
-        default: '{"status_bar_style":"DARK","deployment_target":"14.0","background_modes":"","ats_allow_all":"false"}'
-
-      # ── INPUT 20 ────────────────────────────────────────────────────────────
-      create_github_release:
-        description: "Automatically create a GitHub Release and upload all artifacts"
+      pull_to_refresh:
+        description: "Enable pull‑to‑refresh (may need custom JS)"
         required: false
         default: "false"
         type: choice
-        options: ["true", "false"]
+        options:
+          - "true"
+          - "false"
 
-# =============================================================================
-# GLOBAL ENV
-# =============================================================================
+      cache_mode:
+        description: "WebView cache strategy"
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - cache_else_network
+          - network_else_cache
+          - cache_only
 
+      # ---------- Offline & custom code ----------
+      offline_fallback_html:
+        description: "HTML string to show when offline (leave empty to skip)"
+        required: false
+        default: ""
+
+      custom_javascript:
+        description: "JavaScript to inject after page load (script block)"
+        required: false
+        default: ""
+
+      custom_css:
+        description: "CSS to inject into every page (style block)"
+        required: false
+        default: ""
+
+      # ---------- Permissions (Android manifests) ----------
+      enable_location:
+        description: "Request fine location permission"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_camera:
+        description: "Request camera permission"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_microphone:
+        description: "Request record audio permission"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      enable_file_picker:
+        description: "Allow file uploads (READ_EXTERNAL_STORAGE)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      # ---------- Icons ----------
+      icon_url:
+        description: "Optional direct PNG/JPG URL for the app icon. Leave empty for auto‑generated letter icon."
+        required: false
+        default: ""
+
+      icon_foreground_color:
+        description: "Foreground colour for letter icon (HEX)"
+        required: false
+        default: "#FFFFFF"
+
+      icon_background_color:
+        description: "Background colour for adaptive icon (HEX)"
+        required: false
+        default: "#111827"
+
+      adaptive_icon:
+        description: "Generate Android adaptive icons (API 26+)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+      # ---------- iOS specific ----------
+      ios_status_bar_style:
+        description: "iOS status bar style"
+        required: false
+        default: "DARK"
+        type: choice
+        options:
+          - DARK
+          - LIGHT
+
+      # ---------- Android output format ----------
+      android_output:
+        description: "Which package(s) to produce"
+        required: true
+        default: "apk"
+        type: choice
+        options:
+          - apk
+          - aab
+          - both
+
+      # ---------- Advanced ----------
+      disable_back_button:
+        description: "Overrides back button to stay inside WebView"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  actions: read
+
+# -------------------------------------------------------------------
+#  ENVIRONMENT – all inputs become env vars for easy scripting
+# -------------------------------------------------------------------
 env:
-  BUILD_TARGET:   ${{ github.event.inputs.build_target }}
+  BUILD_TARGET: ${{ github.event.inputs.build_target }}
+  WEBSITE_URL: ${{ github.event.inputs.website_url }}
+  APP_NAME: ${{ github.event.inputs.app_name }}
+  APP_ID: ${{ github.event.inputs.app_id }}
+  VERSION_NAME: ${{ github.event.inputs.version_name }}
+  VERSION_CODE: ${{ github.event.inputs.version_code }}
+  APP_COLOR: ${{ github.event.inputs.app_color }}
+  STATUS_BAR_COLOR: ${{ github.event.inputs.status_bar_color }}
+  NAVIGATION_BAR_COLOR: ${{ github.event.inputs.navigation_bar_color }}
+  SPLASH_TEXT: ${{ github.event.inputs.splash_text }}
+  SPLASH_IMAGE_URL: ${{ github.event.inputs.splash_image_url }}
+  SPLASH_DURATION: ${{ github.event.inputs.splash_show_duration }}
+  ORIENTATION: ${{ github.event.inputs.orientation }}
+  FULLSCREEN: ${{ github.event.inputs.fullscreen }}
+  ALLOW_HTTP: ${{ github.event.inputs.allow_http }}
+  ALLOW_NAVIGATION: ${{ github.event.inputs.allow_navigation }}
+  USER_AGENT_SUFFIX: ${{ github.event.inputs.user_agent_suffix }}
+  ENABLE_ZOOM: ${{ github.event.inputs.enable_zoom }}
+  PULL_TO_REFRESH: ${{ github.event.inputs.pull_to_refresh }}
+  CACHE_MODE: ${{ github.event.inputs.cache_mode }}
+  OFFLINE_HTML: ${{ github.event.inputs.offline_fallback_html }}
+  CUSTOM_JS: ${{ github.event.inputs.custom_javascript }}
+  CUSTOM_CSS: ${{ github.event.inputs.custom_css }}
+  ENABLE_LOCATION: ${{ github.event.inputs.enable_location }}
+  ENABLE_CAMERA: ${{ github.event.inputs.enable_camera }}
+  ENABLE_MICROPHONE: ${{ github.event.inputs.enable_microphone }}
+  ENABLE_FILE_PICKER: ${{ github.event.inputs.enable_file_picker }}
+  ICON_URL: ${{ github.event.inputs.icon_url }}
+  ICON_FOREGROUND_COLOR: ${{ github.event.inputs.icon_foreground_color }}
+  ICON_BACKGROUND_COLOR: ${{ github.event.inputs.icon_background_color }}
+  ADAPTIVE_ICON: ${{ github.event.inputs.adaptive_icon }}
+  IOS_STATUS_BAR_STYLE: ${{ github.event.inputs.ios_status_bar_style }}
   ANDROID_OUTPUT: ${{ github.event.inputs.android_output }}
-  BUILD_TYPE:     ${{ github.event.inputs.build_type }}
-  WEBSITE_URL:    ${{ github.event.inputs.website_url }}
-  APP_NAME:       ${{ github.event.inputs.app_name }}
-  APP_ID:         ${{ github.event.inputs.app_id }}
-  CREATE_RELEASE: ${{ github.event.inputs.create_github_release }}
-  CREATOR:        "Zygor"
-  CREATOR_INSTAGRAM: "@zygorlap"
+  DISABLE_BACK_BUTTON: ${{ github.event.inputs.disable_back_button }}
 
-defaults:
-  run:
-    shell: bash
-
-# =============================================================================
-# JOBS
-# =============================================================================
-
+# ===================================================================
+#  JOBS
+# ===================================================================
 jobs:
-
-  # ===========================================================================
-  # JOB 1 — VALIDATE & EXPAND
-  # ===========================================================================
-
-  validate:
-    name: Validate Inputs and Expand JSON Settings
-    runs-on: ubuntu-latest
-    outputs:
-      valid:        ${{ steps.check.outputs.valid }}
-      app_id_safe:  ${{ steps.check.outputs.app_id_safe }}
-      url_scheme:   ${{ steps.check.outputs.url_scheme }}
-
-    steps:
-
-      - name: Install jq
-        run: |
-          sudo apt-get update -y -qq
-          sudo apt-get install -y -qq jq
-
-      - name: Parse JSON inputs and validate
-        id: check
-        env:
-          _VERSION_INFO:    ${{ github.event.inputs.version_info }}
-          _THEME_COLORS:    ${{ github.event.inputs.theme_colors }}
-          _SPLASH:          ${{ github.event.inputs.splash_settings }}
-          _DISPLAY:         ${{ github.event.inputs.display_settings }}
-          _NETWORK:         ${{ github.event.inputs.network_settings }}
-          _WEBVIEW:         ${{ github.event.inputs.webview_behavior }}
-          _OFFLINE:         ${{ github.event.inputs.offline_settings }}
-          _CODE:            ${{ github.event.inputs.code_injection }}
-          _PERMS:           ${{ github.event.inputs.permissions }}
-          _ICONS:           ${{ github.event.inputs.icon_settings }}
-          _SIGNING:         ${{ github.event.inputs.signing_settings }}
-          _BUILD_OPTS:      ${{ github.event.inputs.build_options }}
-          _IOS:             ${{ github.event.inputs.ios_settings }}
-        run: |
-          set -euo pipefail
-          echo "=================================================================="
-          echo " Ultimate WebView App Builder — Input Validation"
-          echo " Created by ${CREATOR} — Instagram ${CREATOR_INSTAGRAM}"
-          echo "=================================================================="
-
-          ERRORS=0
-
-          # Helper: safe jq read (returns default on missing/null key)
-          jq_str() {
-            local json="$1" key="$2" default="${3:-}"
-            val=$(echo "$json" | jq -r ".$key // empty" 2>/dev/null || true)
-            echo "${val:-$default}"
-          }
-
-          # Parse each JSON bundle
-          V="$_VERSION_INFO"  T="$_THEME_COLORS"  S="$_SPLASH"
-          D="$_DISPLAY"       N="$_NETWORK"        W="$_WEBVIEW"
-          O="$_OFFLINE"       C="$_CODE"           P="$_PERMS"
-          I="$_ICONS"         SIGN="$_SIGNING"     B="$_BUILD_OPTS"
-          IOS="$_IOS"
-
-          VERSION_NAME=$(jq_str "$V" version_name "1.0.0")
-          VERSION_CODE=$(jq_str "$V" version_code "1")
-          MIN_SDK=$(jq_str "$V" min_sdk "24")
-          TARGET_SDK=$(jq_str "$V" target_sdk "35")
-          COMPILE_SDK=$(jq_str "$V" compile_sdk "35")
-
-          APP_COLOR=$(jq_str "$T" app_color "#111827")
-          APP_COLOR_SECONDARY=$(jq_str "$T" app_color_secondary "#1F2937")
-          STATUS_BAR_COLOR=$(jq_str "$T" status_bar_color "#000000")
-          STATUS_BAR_STYLE=$(jq_str "$T" status_bar_style "light")
-          NAVIGATION_BAR_COLOR=$(jq_str "$T" navigation_bar_color "#000000")
-          NAVIGATION_BAR_STYLE=$(jq_str "$T" navigation_bar_style "light")
-          DARK_MODE_SUPPORT=$(jq_str "$T" dark_mode_support "true")
-
-          SPLASH_TEXT=$(jq_str "$S" text "Loading...")
-          SPLASH_IMAGE_URL=$(jq_str "$S" image_url "")
-          SPLASH_DURATION=$(jq_str "$S" show_duration_ms "2000")
-          SPLASH_FADE=$(jq_str "$S" fade_duration_ms "300")
-          SPLASH_ANIMATION=$(jq_str "$S" animation "fade")
-          LOADING_STYLE=$(jq_str "$S" loading_style "spinner")
-
-          ORIENTATION=$(jq_str "$D" orientation "portrait")
-          FULLSCREEN=$(jq_str "$D" fullscreen "false")
-          KEEP_SCREEN_ON=$(jq_str "$D" keep_screen_on "false")
-
-          ALLOW_HTTP=$(jq_str "$N" allow_http "false")
-          ALLOW_NAVIGATION=$(jq_str "$N" allow_navigation "*")
-          EXTERNAL_LINKS=$(jq_str "$N" external_links "block")
-          USER_AGENT_SUFFIX=$(jq_str "$N" user_agent_suffix "UltimateWebViewApp/1.0")
-          SSL_ERROR_HANDLING=$(jq_str "$N" ssl_error_handling "strict")
-          MIXED_CONTENT=$(jq_str "$N" mixed_content "false")
-          DEEP_LINK_SCHEME=$(jq_str "$N" deep_link_scheme "")
-          DEEP_LINK_HOST=$(jq_str "$N" deep_link_host "")
-          CUSTOM_HEADERS=$(jq_str "$N" custom_headers "")
-
-          ENABLE_ZOOM=$(jq_str "$W" enable_zoom "false")
-          PULL_TO_REFRESH=$(jq_str "$W" pull_to_refresh "false")
-          PTR_COLOR=$(jq_str "$W" pull_to_refresh_color "#FFFFFF")
-          CACHE_MODE=$(jq_str "$W" cache_mode "default")
-          HARDWARE_ACCELERATION=$(jq_str "$W" hardware_acceleration "true")
-          MEDIA_AUTOPLAY=$(jq_str "$W" media_autoplay "true")
-          DOM_STORAGE=$(jq_str "$W" dom_storage "true")
-          COOKIE_PERSISTENCE=$(jq_str "$W" cookie_persistence "true")
-          SERVICE_WORKER=$(jq_str "$W" service_worker "true")
-          PWA_DETECTION=$(jq_str "$W" pwa_detection "true")
-          SAFE_AREA=$(jq_str "$W" safe_area "true")
-          DISABLE_BACK_BUTTON=$(jq_str "$W" disable_back_button "true")
-
-          OFFLINE_HTML=$(jq_str "$O" fallback_html "")
-          OFFLINE_RETRY=$(jq_str "$O" retry_interval_seconds "5")
-          OFFLINE_MSG=$(jq_str "$O" network_error_message "No internet connection.")
-
-          CUSTOM_JS=$(jq_str "$C" custom_javascript "")
-          CUSTOM_CSS=$(jq_str "$C" custom_css "")
-          CUSTOM_FONT_URL=$(jq_str "$C" custom_font_url "")
-
-          ENABLE_LOCATION=$(jq_str "$P" location "false")
-          ENABLE_CAMERA=$(jq_str "$P" camera "false")
-          ENABLE_MICROPHONE=$(jq_str "$P" microphone "false")
-          ENABLE_FILE_PICKER=$(jq_str "$P" file_picker "false")
-          ENABLE_DOWNLOADS=$(jq_str "$P" downloads "false")
-          ENABLE_NOTIFICATIONS=$(jq_str "$P" notifications "false")
-          ENABLE_BLUETOOTH=$(jq_str "$P" bluetooth "false")
-          ENABLE_NFC=$(jq_str "$P" nfc "false")
-
-          ICON_URL=$(jq_str "$I" icon_url "")
-          ICON_FG_COLOR=$(jq_str "$I" foreground_color "#FFFFFF")
-          ICON_BG_COLOR=$(jq_str "$I" background_color "#111827")
-          ADAPTIVE_ICON=$(jq_str "$I" adaptive "true")
-          MONOCHROME_ICON=$(jq_str "$I" monochrome "true")
-
-          KEYSTORE_B64=$(jq_str "$SIGN" keystore_base64 "")
-          KEYSTORE_PASS=$(jq_str "$SIGN" keystore_password "android")
-          KEY_ALIAS=$(jq_str "$SIGN" key_alias "release")
-          KEY_PASS=$(jq_str "$SIGN" key_password "android")
-
-          PROGUARD_ENABLED=$(jq_str "$B" proguard_enabled "true")
-          MULTIDEX_ENABLED=$(jq_str "$B" multidex_enabled "true")
-          RESOURCE_SHRINKING=$(jq_str "$B" resource_shrinking "true")
-          ABI_FILTERS=$(jq_str "$B" abi_filters "armeabi-v7a,arm64-v8a")
-          SPLIT_APKS=$(jq_str "$B" split_apks "false")
-
-          IOS_STATUS_STYLE=$(jq_str "$IOS" status_bar_style "DARK")
-          IOS_DEPLOYMENT=$(jq_str "$IOS" deployment_target "14.0")
-          IOS_BG_MODES=$(jq_str "$IOS" background_modes "")
-          IOS_ATS_ALLOW_ALL=$(jq_str "$IOS" ats_allow_all "false")
-
-          # ── Validation ──────────────────────────────────────────────────────
-          echo "Checking website_url: ${WEBSITE_URL}"
-          if [[ -z "${WEBSITE_URL}" ]]; then
-            echo "ERROR: website_url is required"
-            ERRORS=$((ERRORS+1))
-          elif [[ ! "${WEBSITE_URL}" =~ ^https?:// ]]; then
-            echo "ERROR: website_url must start with http:// or https://"
-            ERRORS=$((ERRORS+1))
-          else
-            echo "OK: website_url"
-          fi
-
-          echo "Checking app_id: ${APP_ID}"
-          if [[ ! "${APP_ID}" =~ ^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*){2,}$ ]]; then
-            echo "ERROR: app_id '${APP_ID}' is invalid (use reverse-domain format like com.company.app)"
-            ERRORS=$((ERRORS+1))
-          else
-            echo "OK: app_id"
-          fi
-
-          if [[ ! "${VERSION_CODE}" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: version_code must be a positive integer"
-            ERRORS=$((ERRORS+1))
-          else
-            echo "OK: version_code=${VERSION_CODE}"
-          fi
-
-          if [[ ! "${VERSION_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "WARNING: version_name '${VERSION_NAME}' does not look like semver — proceeding"
-          else
-            echo "OK: version_name=${VERSION_NAME}"
-          fi
-
-          for SDK_VAR in MIN_SDK TARGET_SDK COMPILE_SDK; do
-            SDK_VAL="${!SDK_VAR}"
-            if [[ ! "${SDK_VAL}" =~ ^[0-9]+$ ]]; then
-              echo "ERROR: ${SDK_VAR} must be a positive integer, got '${SDK_VAL}'"
-              ERRORS=$((ERRORS+1))
-            else
-              echo "OK: ${SDK_VAR}=${SDK_VAL}"
-            fi
-          done
-
-          if [[ $ERRORS -gt 0 ]]; then
-            echo "VALIDATION FAILED: $ERRORS error(s). Fix inputs and retry."
-            exit 1
-          fi
-
-          # Derived helpers
-          URL_SCHEME="https"
-          [[ "${WEBSITE_URL}" =~ ^http:// ]] && URL_SCHEME="http"
-          APP_ID_SAFE=$(echo "${APP_ID}" | tr '.' '/')
-
-          # Write expanded.env for downstream jobs
-          mkdir -p /tmp/expanded
-          cat > /tmp/expanded/expanded.env <<ENVEOF
-          export VERSION_NAME="${VERSION_NAME}"
-          export VERSION_CODE="${VERSION_CODE}"
-          export MIN_SDK="${MIN_SDK}"
-          export TARGET_SDK="${TARGET_SDK}"
-          export COMPILE_SDK="${COMPILE_SDK}"
-          export APP_COLOR="${APP_COLOR}"
-          export APP_COLOR_SECONDARY="${APP_COLOR_SECONDARY}"
-          export STATUS_BAR_COLOR="${STATUS_BAR_COLOR}"
-          export STATUS_BAR_STYLE="${STATUS_BAR_STYLE}"
-          export NAVIGATION_BAR_COLOR="${NAVIGATION_BAR_COLOR}"
-          export NAVIGATION_BAR_STYLE="${NAVIGATION_BAR_STYLE}"
-          export DARK_MODE_SUPPORT="${DARK_MODE_SUPPORT}"
-          export SPLASH_TEXT="${SPLASH_TEXT}"
-          export SPLASH_IMAGE_URL="${SPLASH_IMAGE_URL}"
-          export SPLASH_DURATION="${SPLASH_DURATION}"
-          export SPLASH_FADE="${SPLASH_FADE}"
-          export SPLASH_ANIMATION="${SPLASH_ANIMATION}"
-          export LOADING_STYLE="${LOADING_STYLE}"
-          export ORIENTATION="${ORIENTATION}"
-          export FULLSCREEN="${FULLSCREEN}"
-          export KEEP_SCREEN_ON="${KEEP_SCREEN_ON}"
-          export ALLOW_HTTP="${ALLOW_HTTP}"
-          export ALLOW_NAVIGATION="${ALLOW_NAVIGATION}"
-          export EXTERNAL_LINKS="${EXTERNAL_LINKS}"
-          export USER_AGENT_SUFFIX="${USER_AGENT_SUFFIX}"
-          export SSL_ERROR_HANDLING="${SSL_ERROR_HANDLING}"
-          export MIXED_CONTENT="${MIXED_CONTENT}"
-          export DEEP_LINK_SCHEME="${DEEP_LINK_SCHEME}"
-          export DEEP_LINK_HOST="${DEEP_LINK_HOST}"
-          export CUSTOM_HEADERS="${CUSTOM_HEADERS}"
-          export ENABLE_ZOOM="${ENABLE_ZOOM}"
-          export PULL_TO_REFRESH="${PULL_TO_REFRESH}"
-          export PTR_COLOR="${PTR_COLOR}"
-          export CACHE_MODE="${CACHE_MODE}"
-          export HARDWARE_ACCELERATION="${HARDWARE_ACCELERATION}"
-          export MEDIA_AUTOPLAY="${MEDIA_AUTOPLAY}"
-          export DOM_STORAGE="${DOM_STORAGE}"
-          export COOKIE_PERSISTENCE="${COOKIE_PERSISTENCE}"
-          export SERVICE_WORKER="${SERVICE_WORKER}"
-          export PWA_DETECTION="${PWA_DETECTION}"
-          export SAFE_AREA="${SAFE_AREA}"
-          export DISABLE_BACK_BUTTON="${DISABLE_BACK_BUTTON}"
-          export OFFLINE_HTML="${OFFLINE_HTML}"
-          export OFFLINE_RETRY="${OFFLINE_RETRY}"
-          export OFFLINE_MSG="${OFFLINE_MSG}"
-          export CUSTOM_JS="${CUSTOM_JS}"
-          export CUSTOM_CSS="${CUSTOM_CSS}"
-          export CUSTOM_FONT_URL="${CUSTOM_FONT_URL}"
-          export ENABLE_LOCATION="${ENABLE_LOCATION}"
-          export ENABLE_CAMERA="${ENABLE_CAMERA}"
-          export ENABLE_MICROPHONE="${ENABLE_MICROPHONE}"
-          export ENABLE_FILE_PICKER="${ENABLE_FILE_PICKER}"
-          export ENABLE_DOWNLOADS="${ENABLE_DOWNLOADS}"
-          export ENABLE_NOTIFICATIONS="${ENABLE_NOTIFICATIONS}"
-          export ENABLE_BLUETOOTH="${ENABLE_BLUETOOTH}"
-          export ENABLE_NFC="${ENABLE_NFC}"
-          export ICON_URL="${ICON_URL}"
-          export ICON_FG_COLOR="${ICON_FG_COLOR}"
-          export ICON_BG_COLOR="${ICON_BG_COLOR}"
-          export ADAPTIVE_ICON="${ADAPTIVE_ICON}"
-          export MONOCHROME_ICON="${MONOCHROME_ICON}"
-          export KEYSTORE_B64="${KEYSTORE_B64}"
-          export KEYSTORE_PASS="${KEYSTORE_PASS}"
-          export KEY_ALIAS="${KEY_ALIAS}"
-          export KEY_PASS="${KEY_PASS}"
-          export PROGUARD_ENABLED="${PROGUARD_ENABLED}"
-          export MULTIDEX_ENABLED="${MULTIDEX_ENABLED}"
-          export RESOURCE_SHRINKING="${RESOURCE_SHRINKING}"
-          export ABI_FILTERS="${ABI_FILTERS}"
-          export SPLIT_APKS="${SPLIT_APKS}"
-          export IOS_STATUS_STYLE="${IOS_STATUS_STYLE}"
-          export IOS_DEPLOYMENT="${IOS_DEPLOYMENT}"
-          export IOS_BG_MODES="${IOS_BG_MODES}"
-          export IOS_ATS_ALLOW_ALL="${IOS_ATS_ALLOW_ALL}"
-          ENVEOF
-
-          echo "valid=true"                   >> "$GITHUB_OUTPUT"
-          echo "app_id_safe=${APP_ID_SAFE}"   >> "$GITHUB_OUTPUT"
-          echo "url_scheme=${URL_SCHEME}"     >> "$GITHUB_OUTPUT"
-
-          echo "=================================================================="
-          echo "VALIDATION PASSED"
-          echo "=================================================================="
-
-      - name: Upload expanded env artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: expanded-env
-          path: /tmp/expanded/expanded.env
-          retention-days: 1
-
-  # ===========================================================================
-  # JOB 2 — ANDROID BUILD
-  # ===========================================================================
-
   android:
-    name: Build Android APK / AAB
-    needs: validate
-    if: |
-      needs.validate.outputs.valid == 'true' &&
-      (github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'both')
+    name: 🟢 Build Android APK/AAB
+    if: env.BUILD_TARGET == 'android' || env.BUILD_TARGET == 'both'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download expanded env
-        uses: actions/download-artifact@v4
-        with:
-          name: expanded-env
-          path: /tmp/expanded
-
-      - name: Setup Java 17 LTS
+      # ---------------------------------------------------------------
+      #  SETUP TOOLS
+      # ---------------------------------------------------------------
+      - name: ⚙️ Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
-          # cache: gradle  <-- removed because repo has no Gradle files at checkout
+          java-version: 21
 
-      - name: Setup Node.js 20 LTS
+      - name: ⚙️ Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      - name: Install system dependencies
+      - name: 📦 Install system & Python tools
+        shell: bash
         run: |
-          echo "=================================================================="
-          echo "Installing system dependencies"
-          echo "=================================================================="
-          sudo apt-get update -y -qq
-          sudo apt-get install -y -qq curl wget unzip zip python3-pip imagemagick jq
-          python3 -m pip install --upgrade pip --quiet
-          python3 -m pip install pillow --quiet
-          echo "Java: $(java -version 2>&1 | head -1)"
-          echo "Node: $(node --version)"
-          echo "npm:  $(npm --version)"
-          echo "Python: $(python3 --version)"
+          sudo apt-get update
+          sudo apt-get install -y curl unzip zip python3-pip imagemagick 2>/dev/null
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pillow
 
-      - name: Accept Android SDK licences and install platform tools
+      # ---------------------------------------------------------------
+      #  CREATE CAPACITOR PROJECT
+      # ---------------------------------------------------------------
+      - name: 🧱 Create Capacitor Android project
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env
-          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses 2>/dev/null || true
-          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
-            "platform-tools" \
-            "platforms;android-${TARGET_SDK}" \
-            "build-tools;35.0.0" \
-            "extras;android;m2repository" \
-            "extras;google;m2repository" 2>/dev/null || echo "WARNING: Some SDK components could not be installed"
+          set -e
+          mkdir app && cd app
 
-      # ── Step: Create Capacitor project ──────────────────────────────────────
-      - name: Create Capacitor Android project
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          echo "=================================================================="
-          echo "Creating Capacitor project — ${APP_NAME} (${APP_ID})"
-          echo "Website: ${WEBSITE_URL}"
-          echo "=================================================================="
-
-          mkdir -p app
-          cd app
+          # Init Node project and install Capacitor + plugins
           npm init -y
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest
+          npm install @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest
+          npm install @capacitor/browser@latest   # for future use
 
-          # Robust npm install with retries
-          npm_install() {
-            local attempt=1
-            while [[ $attempt -le 5 ]]; do
-              echo "npm install attempt $attempt/5..."
-              npm install "$@" \
-                --legacy-peer-deps \
-                --no-audit \
-                --no-fund \
-                --prefer-offline \
-                2>&1 && return 0
-              attempt=$((attempt+1))
-              echo "Retrying npm in 20s..."
-              sleep 20
-            done
-            echo "ERROR: npm install failed after 5 attempts"
-            return 1
-          }
-
-          npm_install \
-            @capacitor/core@6 \
-            @capacitor/cli@6 \
-            @capacitor/android@6 \
-            @capacitor/status-bar@6 \
-            @capacitor/splash-screen@6 \
-            @capacitor/app@6 \
-            @capacitor/keyboard@6 \
-            @capacitor/network@6
-
+          # Minimal loader page
           mkdir -p www
-          echo "npm packages installed successfully"
-
-      # ── Step: Generate loader HTML ───────────────────────────────────────────
-      - name: Generate loader HTML and service worker
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app
-
-          case "${LOADING_STYLE}" in
-            spinner) SPINNER_HTML='<div class="loader-spinner"></div>' ;;
-            dots)    SPINNER_HTML='<div class="loader-dots"><span></span><span></span><span></span></div>' ;;
-            bar)     SPINNER_HTML='<div class="loader-bar"><div class="loader-bar-inner"></div></div>' ;;
-            *)       SPINNER_HTML='' ;;
-          esac
-
-          SAFE_AREA_CSS=""
-          if [[ "${SAFE_AREA}" == "true" ]]; then
-            SAFE_AREA_CSS=":root{--sat:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);}body{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);}"
-          fi
-
-          OFFLINE_BODY="${OFFLINE_HTML}"
-          if [[ -z "${OFFLINE_BODY}" ]]; then
-            OFFLINE_BODY="<div class=\"offline-container\"><div class=\"offline-icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"/><path d=\"M16.72 11.06A10.94 10.94 0 0 1 19 12.55\"/><path d=\"M5 12.55a10.94 10.94 0 0 1 5.17-2.39\"/><circle cx=\"12\" cy=\"20\" r=\"1\"/></svg></div><h2>${OFFLINE_MSG}</h2><button onclick=\"window.location.reload()\">Try Again</button></div>"
-          fi
-
-          cat > www/index.html << HTMLEOF
+          cat > www/index.html <<'HTML_EOF'
           <!DOCTYPE html>
-          <html lang="en">
+          <html>
           <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
             <meta name="theme-color" content="${APP_COLOR}">
             <title>${APP_NAME}</title>
             <style>
-              *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-              ${SAFE_AREA_CSS}
-              html,body{width:100%;height:100%;background:${APP_COLOR};color:#FFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
-              .splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:${APP_COLOR};z-index:9999;transition:opacity ${SPLASH_FADE}ms ease}
-              .splash.hidden{opacity:0;pointer-events:none}
-              .splash-text{font-size:16px;font-weight:500;opacity:.85}
-              .loader-spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:#FFF;border-radius:50%;animation:spin .8s linear infinite}
-              .loader-dots{display:flex;gap:8px}.loader-dots span{width:10px;height:10px;background:rgba(255,255,255,.8);border-radius:50%;animation:bounce 1.4s ease-in-out infinite both}
-              .loader-dots span:nth-child(1){animation-delay:-.32s}.loader-dots span:nth-child(2){animation-delay:-.16s}
-              .loader-bar{width:180px;height:3px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden}.loader-bar-inner{height:100%;background:#FFF;border-radius:3px;animation:slide 1.5s ease-in-out infinite}
-              @keyframes spin{to{transform:rotate(360deg)}}
-              @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
-              @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
-              .offline-page{display:none;position:fixed;inset:0;flex-direction:column;align-items:center;justify-content:center;background:${APP_COLOR};z-index:9998}
-              .offline-page.visible{display:flex}
-              .offline-container{display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 24px;text-align:center}
-              .offline-icon{width:64px;height:64px;opacity:.6}.offline-icon svg{width:100%;height:100%}
-              .offline-container h2{font-size:18px;font-weight:600;line-height:1.5;max-width:280px;opacity:.9}
-              .offline-container button{margin-top:8px;padding:12px 32px;background:rgba(255,255,255,.15);color:#FFF;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+              * { margin:0; padding:0; box-sizing:border-box; }
+              html,body{
+                width:100%; height:100%;
+                background:${APP_COLOR}; color:white;
+                font-family:Arial,sans-serif; overflow:hidden;
+              }
+              .loader {
+                height:100%; display:flex; align-items:center; justify-content:center;
+                flex-direction:column; gap:16px;
+              }
+              .spinner {
+                width:48px; height:48px;
+                border:5px solid rgba(255,255,255,.25);
+                border-top-color:white;
+                border-radius:50%;
+                animation:spin 1s linear infinite;
+              }
+              @keyframes spin { to{transform:rotate(360deg)} }
             </style>
           </head>
           <body>
-            <div class="splash" id="splash">${SPINNER_HTML}<p class="splash-text">${SPLASH_TEXT}</p></div>
-            <div class="offline-page" id="offline-page">${OFFLINE_BODY}</div>
-            <script>
-              if(${PWA_DETECTION}){window.__NATIVE_APP__=true;window.__APP_VERSION__="${VERSION_NAME}";}
-              var splash=document.getElementById('splash'),offlinePage=document.getElementById('offline-page'),retryInterval=null;
-              function hideSplash(){if(splash){splash.classList.add('hidden');setTimeout(function(){if(splash&&splash.parentNode)splash.parentNode.removeChild(splash)},${SPLASH_FADE}+100)}}
-              function showOffline(){offlinePage&&offlinePage.classList.add('visible');hideSplash();if(!retryInterval)retryInterval=setInterval(function(){if(navigator.onLine){clearInterval(retryInterval);retryInterval=null;offlinePage&&offlinePage.classList.remove('visible');window.location.reload()}},${OFFLINE_RETRY}*1000)}
-              window.addEventListener('online',function(){offlinePage&&offlinePage.classList.remove('visible');window.location.reload()});
-              window.addEventListener('offline',showOffline);
-              setTimeout(function(){navigator.onLine?hideSplash():showOffline()},${SPLASH_DURATION});
-              if(${SERVICE_WORKER}&&'serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});
-            </script>
+            <div class="loader">
+              <div class="spinner"></div>
+              <strong>${SPLASH_TEXT}</strong>
+            </div>
           </body>
           </html>
-          HTMLEOF
+          HTML_EOF
 
-          cat > www/sw.js << SWEOF
-          var CACHE_NAME='${APP_ID}-v${VERSION_NAME}';
-          self.addEventListener('install',function(e){e.waitUntil(caches.open(CACHE_NAME).then(function(c){return c.addAll(['/'])}).catch(function(){}));self.skipWaiting()});
-          self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(n){return n!==CACHE_NAME}).map(function(n){return caches.delete(n)}))}));self.clients.claim()});
-          self.addEventListener('fetch',function(e){if(e.request.mode==='navigate')e.respondWith(fetch(e.request).catch(function(){return caches.match('/')||new Response('Offline')}))});
-          SWEOF
-          echo "Loader HTML and service worker generated"
+          # Init Capacitor
+          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
 
-      # ── Step: Capacitor config + platform ───────────────────────────────────
-      - name: Generate Capacitor config and add Android platform
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app
-
-          # Build allowNavigation array
-          if [[ "${ALLOW_NAVIGATION}" == "*" ]]; then
-            NAV_ARRAY='"*"'
-          else
-            NAV_ARRAY=$(echo "${ALLOW_NAVIGATION}" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -s . | tr -d '\n')
-          fi
-
-          cat > capacitor.config.json << CAPEOF
+          # Capacitor config – the key part: server.url + allowNavigation = all links in‑app
+          cat > capacitor.config.json <<JSON_EOF
           {
             "appId": "${APP_ID}",
             "appName": "${APP_NAME}",
             "webDir": "www",
-            "bundledWebRuntime": false,
             "server": {
               "url": "${WEBSITE_URL}",
               "cleartext": ${ALLOW_HTTP},
-              "allowNavigation": [${NAV_ARRAY}]
-            },
-            "android": {
-              "webContentsDebuggingEnabled": false,
-              "loggingBehavior": "none",
-              "useLegacyBridge": false,
-              "appendUserAgent": "${USER_AGENT_SUFFIX}",
-              "backgroundColor": "${APP_COLOR}",
-              "allowMixedContent": ${MIXED_CONTENT}
-            },
-            "ios": {
-              "scheme": "${APP_NAME}",
-              "backgroundColor": "${APP_COLOR}",
-              "contentInset": "automatic",
-              "scrollEnabled": true
+              "allowNavigation": ["${ALLOW_NAVIGATION}"]
             },
             "plugins": {
               "SplashScreen": {
                 "launchShowDuration": ${SPLASH_DURATION},
                 "launchAutoHide": true,
-                "launchFadeOutDuration": ${SPLASH_FADE},
                 "backgroundColor": "${APP_COLOR}",
-                "androidSplashResourceName": "splash",
-                "androidScaleType": "CENTER_CROP",
-                "showSpinner": false,
-                "splashFullScreen": true,
-                "splashImmersive": true,
-                "useDialog": false
+                "showSpinner": true,
+                "spinnerColor": "#ffffff"
               },
               "StatusBar": {
-                "style": "${STATUS_BAR_STYLE}",
+                "style": "DARK",
                 "backgroundColor": "${STATUS_BAR_COLOR}",
-                "overlaysWebView": false,
-                "animated": true
+                "overlaysWebView": false
               },
               "Keyboard": {
                 "resize": "body",
-                "style": "dark",
-                "resizeOnFullScreen": true
+                "style": "dark"
               }
             }
           }
-          CAPEOF
+          JSON_EOF
 
-          # Init capacitor (may already be initialised — ignore error)
-          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www 2>&1 || true
+          # Add Android platform
+          npx cap add android
+          npx cap sync android
 
-          # Add Android platform with retries
-          for attempt in 1 2 3; do
-            echo "cap add android — attempt $attempt/3"
-            if npx cap add android 2>&1; then
-              echo "cap add android succeeded"
-              break
-            fi
-            if [[ $attempt -eq 3 ]]; then
-              echo "ERROR: cap add android failed after 3 attempts"
-              echo "--- Installed packages ---"
-              npm list --depth=0 2>&1 || true
-              exit 1
-            fi
-            echo "Retrying in 20s..."
-            sleep 20
-          done
-
-          # Sync
-          npx cap sync android 2>&1
-          echo "Capacitor Android platform ready"
-
-      # ── Step: Patch build.gradle ─────────────────────────────────────────────
-      - name: Patch build.gradle (versions, signing, proguard)
+      # ---------------------------------------------------------------
+      #  CUSTOMISE ANDROID MANIFEST & RESOURCES
+      # ---------------------------------------------------------------
+      - name: 🎨 Customize Android manifest & resources
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app/android
-
-          APP_GRADLE="app/build.gradle"
-          [[ ! -f "$APP_GRADLE" ]] && { echo "ERROR: $APP_GRADLE not found"; ls -la app/ || true; exit 1; }
-
-          cp "$APP_GRADLE" "${APP_GRADLE}.bak"
-
-          python3 << 'PYGRADLE'
-          import re, os, sys
-
-          gradle_path = "app/build.gradle"
-          with open(gradle_path) as f:
-              content = f.read()
-
-          e = os.environ
-          proguard  = e.get("PROGUARD_ENABLED", "true") == "true"
-          multidex  = e.get("MULTIDEX_ENABLED", "true") == "true"
-          resources = e.get("RESOURCE_SHRINKING", "true") == "true"
-          split     = e.get("SPLIT_APKS", "false") == "true"
-          abi_list  = [a.strip() for a in e.get("ABI_FILTERS", "armeabi-v7a,arm64-v8a").split(",") if a.strip()]
-          abi_str   = ", ".join(f'"{a}"' for a in abi_list)
-
-          app_id       = e.get("APP_ID", "com.example.app")
-          compile_sdk  = e.get("COMPILE_SDK", "35")
-          min_sdk      = e.get("MIN_SDK", "24")
-          target_sdk   = e.get("TARGET_SDK", "35")
-          ver_code     = e.get("VERSION_CODE", "1")
-          ver_name     = e.get("VERSION_NAME", "1.0.0")
-          ks_pass      = e.get("KEYSTORE_PASS", "android")
-          key_alias    = e.get("KEY_ALIAS", "release")
-          key_pass     = e.get("KEY_PASS", "android")
-
-          new_android = f"""android {{
-              compileSdk {compile_sdk}
-              namespace "{app_id}"
-              defaultConfig {{
-                  applicationId "{app_id}"
-                  minSdk {min_sdk}
-                  targetSdk {target_sdk}
-                  versionCode {ver_code}
-                  versionName "{ver_name}"
-                  multiDexEnabled {"true" if multidex else "false"}
-                  vectorDrawables.useSupportLibrary = true
-                  ndk {{
-                      abiFilters {abi_str}
-                  }}
-              }}
-              signingConfigs {{
-                  release {{
-                      storeFile file("../keystore.jks")
-                      storePassword "{ks_pass}"
-                      keyAlias "{key_alias}"
-                      keyPassword "{key_pass}"
-                  }}
-              }}
-              buildTypes {{
-                  debug {{
-                      debuggable true
-                      minifyEnabled false
-                      shrinkResources false
-                  }}
-                  release {{
-                      debuggable false
-                      minifyEnabled {"true" if proguard else "false"}
-                      shrinkResources {"true" if (proguard and resources) else "false"}
-                      signingConfig signingConfigs.release
-                      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-                  }}
-              }}
-              compileOptions {{
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }}
-              kotlinOptions {{
-                  jvmTarget = "17"
-              }}"""
-
-          if split:
-              new_android += f"""
-              splits {{
-                  abi {{
-                      enable true
-                      reset()
-                      include {abi_str}
-                      universalApk true
-                  }}
-              }}"""
-
-          new_android += "\n}\n"
-
-          # Replace existing android { } block or append
-          result = re.sub(r'android\s*\{.*?\n\}', new_android, content, flags=re.DOTALL, count=1)
-          if result == content:
-              result = content + "\n" + new_android
-
-          # Inject multidex dependency if needed
-          if multidex and "multidex" not in result.lower():
-              result = result.replace(
-                  "dependencies {",
-                  'dependencies {\n    implementation "androidx.multidex:multidex:2.0.1"',
-                  1
-              )
-
-          with open(gradle_path, "w") as f:
-              f.write(result)
-
-          print("build.gradle patched successfully")
-          PYGRADLE
-
-          # Pin Gradle wrapper to a stable version
-          WRAPPER="gradle/wrapper/gradle-wrapper.properties"
-          if [[ -f "$WRAPPER" ]]; then
-            sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|g' "$WRAPPER"
-            echo "Gradle wrapper pinned to 8.7"
-          fi
-
-          echo "build.gradle patching complete"
-          cat app/build.gradle
-
-      # ── Step: AndroidManifest ────────────────────────────────────────────────
-      - name: Customize AndroidManifest.xml
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
+          set -e
           cd app/android
 
           MANIFEST="app/src/main/AndroidManifest.xml"
-          [[ ! -f "$MANIFEST" ]] && { echo "ERROR: $MANIFEST not found"; exit 1; }
 
-          python3 << 'PYMANIFEST'
-          import os, re
+          # Essential permissions
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST"
+          fi
+          if ! grep -q "android.permission.ACCESS_NETWORK_STATE" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
+          fi
 
-          manifest_path = "app/src/main/AndroidManifest.xml"
-          with open(manifest_path) as f:
-              content = f.read()
+          # Optional permissions based on inputs
+          if [[ "${ENABLE_LOCATION}" == "true" ]] && ! grep -q "ACCESS_FINE_LOCATION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' "$MANIFEST"
+          fi
+          if [[ "${ENABLE_CAMERA}" == "true" ]] && ! grep -q "CAMERA" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
+          fi
+          if [[ "${ENABLE_MICROPHONE}" == "true" ]] && ! grep -q "RECORD_AUDIO" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' "$MANIFEST"
+          fi
+          if [[ "${ENABLE_FILE_PICKER}" == "true" ]] && ! grep -q "READ_EXTERNAL_STORAGE" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />' "$MANIFEST"
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />' "$MANIFEST"
+          fi
 
-          def add_perm(c, perm):
-              if perm not in c:
-                  c = re.sub(
-                      r'(<manifest[^>]+>)',
-                      r'\1\n    <uses-permission android:name="' + perm + '" />',
-                      c, count=1
-                  )
-              return c
-
-          e = os.environ
-
-          # Always-required permissions
-          for p in [
-              "android.permission.INTERNET",
-              "android.permission.ACCESS_NETWORK_STATE",
-              "android.permission.ACCESS_WIFI_STATE",
-              "android.permission.CHANGE_NETWORK_STATE",
-          ]:
-              content = add_perm(content, p)
-
-          if e.get("ENABLE_LOCATION") == "true":
-              content = add_perm(content, "android.permission.ACCESS_FINE_LOCATION")
-              content = add_perm(content, "android.permission.ACCESS_COARSE_LOCATION")
-          if e.get("ENABLE_CAMERA") == "true":
-              content = add_perm(content, "android.permission.CAMERA")
-          if e.get("ENABLE_MICROPHONE") == "true":
-              content = add_perm(content, "android.permission.RECORD_AUDIO")
-              content = add_perm(content, "android.permission.MODIFY_AUDIO_SETTINGS")
-          if e.get("ENABLE_FILE_PICKER") == "true":
-              for p in [
-                  "android.permission.READ_EXTERNAL_STORAGE",
-                  "android.permission.WRITE_EXTERNAL_STORAGE",
-                  "android.permission.READ_MEDIA_IMAGES",
-                  "android.permission.READ_MEDIA_VIDEO",
-              ]:
-                  content = add_perm(content, p)
-          if e.get("ENABLE_NOTIFICATIONS") == "true":
-              content = add_perm(content, "android.permission.POST_NOTIFICATIONS")
-              content = add_perm(content, "android.permission.VIBRATE")
-          if e.get("ENABLE_BLUETOOTH") == "true":
-              for p in [
-                  "android.permission.BLUETOOTH",
-                  "android.permission.BLUETOOTH_ADMIN",
-                  "android.permission.BLUETOOTH_CONNECT",
-                  "android.permission.BLUETOOTH_SCAN",
-              ]:
-                  content = add_perm(content, p)
-          if e.get("ENABLE_NFC") == "true":
-              content = add_perm(content, "android.permission.NFC")
-
-          # Cleartext traffic
-          if e.get("ALLOW_HTTP") == "true" and "usesCleartextTraffic" not in content:
-              content = content.replace("<application ", '<application android:usesCleartextTraffic="true" ', 1)
-
-          # Hardware acceleration
-          if e.get("HARDWARE_ACCELERATION", "true") == "true" and "hardwareAccelerated" not in content:
-              content = content.replace("<application ", '<application android:hardwareAccelerated="true" ', 1)
-
-          # Network security config
-          if "networkSecurityConfig" not in content:
-              content = content.replace("<application ", '<application android:networkSecurityConfig="@xml/network_security_config" ', 1)
+          # Cleartext traffic for http
+          if [[ "${ALLOW_HTTP}" == "true" ]] && ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
+            sed -i 's|<application |<application android:usesCleartextTraffic="true" |' "$MANIFEST"
+          fi
 
           # Screen orientation
-          orient = e.get("ORIENTATION", "portrait")
-          if orient != "unspecified":
-              content = re.sub(
-                  r'(android:name="\.MainActivity")',
-                  f'android:name=".MainActivity" android:screenOrientation="{orient}"',
-                  content
-              )
+          if [[ "${ORIENTATION}" != "unspecified" ]]; then
+            sed -i "s|android:name=\".MainActivity\"|android:name=\".MainActivity\" android:screenOrientation=\"${ORIENTATION}\"|g" "$MANIFEST" || true
+          fi
 
-          # Keep screen on
-          if e.get("KEEP_SCREEN_ON") == "true":
-              content = re.sub(
-                  r'(android:name="\.MainActivity"[^>]*)',
-                  r'\1 android:keepScreenOn="true"',
-                  content
-              )
-
-          # Deep links
-          app_id = e.get("APP_ID", "com.example.app")
-          deep_scheme = e.get("DEEP_LINK_SCHEME", "")
-          deep_host   = e.get("DEEP_LINK_HOST", "")
-          deep_intent = ""
-          if deep_scheme:
-              deep_intent += (
-                  '<intent-filter>'
-                  '<action android:name="android.intent.action.VIEW"/>'
-                  '<category android:name="android.intent.category.DEFAULT"/>'
-                  '<category android:name="android.intent.category.BROWSABLE"/>'
-                  f'<data android:scheme="{deep_scheme}"/>'
-                  '</intent-filter>'
-              )
-          if deep_host:
-              deep_intent += (
-                  '<intent-filter android:autoVerify="true">'
-                  '<action android:name="android.intent.action.VIEW"/>'
-                  '<category android:name="android.intent.category.DEFAULT"/>'
-                  '<category android:name="android.intent.category.BROWSABLE"/>'
-                  f'<data android:scheme="https" android:host="{deep_host}"/>'
-                  f'<data android:scheme="http"  android:host="{deep_host}"/>'
-                  '</intent-filter>'
-              )
-          if deep_intent:
-              content = re.sub(
-                  r'(android:name="\.MainActivity"[^>]*>)',
-                  r'\1' + deep_intent,
-                  content
-              )
-
-          # FileProvider for file picker / downloads
-          if (e.get("ENABLE_FILE_PICKER") == "true" or e.get("ENABLE_DOWNLOADS") == "true") \
-                  and "FileProvider" not in content:
-              fp = (
-                  f'<provider android:name="androidx.core.content.FileProvider"'
-                  f' android:authorities="{app_id}.fileprovider"'
-                  f' android:exported="false" android:grantUriPermissions="true">'
-                  f'<meta-data android:name="android.support.FILE_PROVIDER_PATHS"'
-                  f' android:resource="@xml/file_paths"/></provider>'
-              )
-              content = content.replace("</application>", fp + "\n</application>")
-
-          with open(manifest_path, "w") as f:
-              f.write(content)
-          print("AndroidManifest.xml customized")
-          PYMANIFEST
-
-      # ── Step: Resource files ─────────────────────────────────────────────────
-      - name: Generate Android resource files
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app/android
-
-          mkdir -p app/src/main/res/{values,values-night,values-v31,xml,drawable,drawable-night}
-
-          cat > app/src/main/res/values/strings.xml << EOF
+          # Strings & colours
+          cat > app/src/main/res/values/strings.xml <<XML_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">${APP_NAME}</string>
@@ -1049,1116 +483,470 @@ jobs:
               <string name="package_name">${APP_ID}</string>
               <string name="custom_url_scheme">${APP_ID}</string>
           </resources>
-          EOF
+          XML_EOF
 
-          cat > app/src/main/res/values/colors.xml << EOF
+          cat > app/src/main/res/values/colors.xml <<XML_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <color name="colorPrimary">${APP_COLOR}</color>
               <color name="colorPrimaryDark">${STATUS_BAR_COLOR}</color>
-              <color name="colorAccent">${APP_COLOR_SECONDARY}</color>
               <color name="navigationBarColor">${NAVIGATION_BAR_COLOR}</color>
-              <color name="splashBackground">${APP_COLOR}</color>
           </resources>
-          EOF
+          XML_EOF
 
-          cat > app/src/main/res/values/themes.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-                  <item name="colorPrimary">@color/colorPrimary</item>
-                  <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-                  <item name="colorAccent">@color/colorAccent</item>
-                  <item name="android:windowBackground">@color/colorPrimary</item>
-                  <item name="android:statusBarColor">@color/colorPrimaryDark</item>
-                  <item name="android:navigationBarColor">@color/navigationBarColor</item>
-              </style>
-              <style name="AppTheme.NoActionBar" parent="AppTheme">
-                  <item name="windowActionBar">false</item>
-                  <item name="windowNoTitle">true</item>
-              </style>
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-                  <item name="android:windowBackground">@drawable/splash</item>
-                  <item name="android:windowFullscreen">${FULLSCREEN}</item>
-                  <item name="android:windowNoTitle">true</item>
-              </style>
-          </resources>
-          EOF
-
-          cat > app/src/main/res/values-v31/themes.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
-                  <item name="android:windowSplashScreenBackground">@color/splashBackground</item>
-                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-                  <item name="android:windowSplashScreenAnimationDuration">${SPLASH_DURATION}</item>
-                  <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
-              </style>
-          </resources>
-          EOF
-
-          # Network security config
-          if [[ "${ALLOW_HTTP}" == "true" || "${SSL_ERROR_HANDLING}" == "permissive" ]]; then
-            cat > app/src/main/res/xml/network_security_config.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <network-security-config>
-              <base-config cleartextTrafficPermitted="${ALLOW_HTTP}">
-                  <trust-anchors>
-                      <certificates src="system"/>
-                      <certificates src="user"/>
-                  </trust-anchors>
-              </base-config>
-          </network-security-config>
-          EOF
-          else
-            cat > app/src/main/res/xml/network_security_config.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <network-security-config>
-              <base-config cleartextTrafficPermitted="false">
-                  <trust-anchors>
-                      <certificates src="system"/>
-                  </trust-anchors>
-              </base-config>
-          </network-security-config>
-          EOF
-          fi
-
-          cat > app/src/main/res/xml/file_paths.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <paths>
-              <external-path name="external_files" path="."/>
-              <files-path     name="files"          path="."/>
-              <cache-path     name="cache"           path="."/>
-          </paths>
-          EOF
-
-          echo "Resource files generated"
-
-      # ── Step: Icons ──────────────────────────────────────────────────────────
-      - name: Generate app icons
+      # ---------------------------------------------------------------
+      #  GENERATE ICONS (REGULAR + ADAPTIVE)
+      # ---------------------------------------------------------------
+      - name: 🖼️ Generate all icons (standard & adaptive)
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
+          set -e
           cd app/android
 
-          for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi mipmap-anydpi-v26 drawable drawable-night; do
+          # Create required drawable/mipmap directories
+          for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi \
+                   mipmap-anydpi-v26 drawable; do
             mkdir -p "app/src/main/res/$d"
           done
 
-          # Try to fetch custom icon
+          # Download icon if URL provided
           if [[ -n "${ICON_URL}" ]]; then
-            curl -fsSL --connect-timeout 15 --retry 3 "${ICON_URL}" -o /tmp/icon_input.png 2>/dev/null || true
+            curl -fsSL "${ICON_URL}" -o /tmp/icon_input || echo "Icon download failed, will generate letter icon"
           fi
 
-          python3 << 'ICONPY'
+          # Run Python script to generate all icon PNGs and adaptive drawables
+          python3 - <<'PYTHON_SCRIPT'
           import os, pathlib
           from PIL import Image, ImageDraw, ImageFont
 
-          app_color = os.environ.get("APP_COLOR", "#111827")
-          fg_color  = os.environ.get("ICON_FG_COLOR", "#FFFFFF")
-          bg_color  = os.environ.get("ICON_BG_COLOR", "#111827")
-          app_name  = os.environ.get("APP_NAME", "App")
-          adaptive  = os.environ.get("ADAPTIVE_ICON", "true") == "true"
-          monochrome = os.environ.get("MONOCHROME_ICON", "true") == "true"
-          letter    = (app_name.strip()[:1] or "A").upper()
-          input_path = pathlib.Path("/tmp/icon_input.png")
+          app_color       = os.environ["APP_COLOR"]
+          fg_color        = os.environ["ICON_FOREGROUND_COLOR"]
+          bg_color        = os.environ["ICON_BACKGROUND_COLOR"]
+          icon_url        = os.environ["ICON_URL"]
+          app_name        = os.environ["APP_NAME"]
+          adaptive        = os.environ["ADAPTIVE_ICON"] == "true"
+          letter          = (app_name.strip()[:1] or "A").upper()
+          input_path      = pathlib.Path("/tmp/icon_input")
 
-          def h2r(h):
-              h = h.lstrip("#")
-              h = h * 2 if len(h) == 3 else h
-              return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
-
-          def letter_icon(size, bg=None, fg=None):
-              img  = Image.new("RGBA", (size, size), (*h2r(bg or app_color), 255))
-              draw = ImageDraw.Draw(img)
-              font = None
-              for fp in [
-                  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                  "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-                  "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-              ]:
-                  if pathlib.Path(fp).exists():
-                      try:
-                          font = ImageFont.truetype(fp, int(size * 0.52))
-                          break
-                      except Exception:
-                          pass
-              if font is None:
-                  font = ImageFont.load_default()
-              bb = draw.textbbox((0, 0), letter, font=font)
-              w, h_ = bb[2] - bb[0], bb[3] - bb[1]
-              draw.text(
-                  ((size - w) / 2 - bb[0], (size - h_) / 2 - bb[1] - size * 0.02),
-                  letter, fill=(*h2r(fg or fg_color), 255), font=font
-              )
-              return img
-
+          # Helper: create a basic icon image (letter or downloaded)
           def base_icon(size):
-              if input_path.exists() and input_path.stat().st_size > 1024:
+              if icon_url and input_path.exists() and input_path.stat().st_size > 0:
                   try:
-                      return Image.open(input_path).convert("RGBA").resize((size, size), Image.LANCZOS)
+                      return Image.open(input_path).convert("RGBA").resize((size, size))
                   except Exception:
                       pass
-              return letter_icon(size)
+              # Fallback: letter on background
+              img = Image.new("RGBA", (size, size), app_color)
+              d = ImageDraw.Draw(img)
+              try:
+                  font = ImageFont.truetype("DejaVuSans-Bold.ttf", int(size * 0.56))
+              except Exception:
+                  font = None
+              bbox = d.textbbox((0,0), letter, font=font)
+              w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+              d.text(((size-w)/2, (size-h)/2 - size*0.04), letter, fill=fg_color, font=font)
+              return img
 
-          sizes = {"mipmap-mdpi": 48, "mipmap-hdpi": 72, "mipmap-xhdpi": 96, "mipmap-xxhdpi": 144, "mipmap-xxxhdpi": 192}
-          for folder, size in sizes.items():
+          # Standard launcher icon sizes
+          sizes_launcher = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+          for folder, size in sizes_launcher.items():
               img = base_icon(size)
-              p = f"app/src/main/res/{folder}"
-              img.save(f"{p}/ic_launcher.png", "PNG", optimize=True)
-              img.save(f"{p}/ic_launcher_round.png", "PNG", optimize=True)
+              img.save(f"app/src/main/res/{folder}/ic_launcher.png")
+              img.save(f"app/src/main/res/{folder}/ic_launcher_round.png")
 
+          # Adaptive icon foreground sizes (108dp base)
           if adaptive:
-              fg_sizes = {"mipmap-mdpi": 108, "mipmap-hdpi": 162, "mipmap-xhdpi": 216, "mipmap-xxhdpi": 324, "mipmap-xxxhdpi": 432}
-              for folder, size in fg_sizes.items():
-                  p = f"app/src/main/res/{folder}"
-                  os.makedirs(p, exist_ok=True)
-                  try:
-                      if input_path.exists() and input_path.stat().st_size > 1024:
-                          fg_img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-                          icon   = Image.open(input_path).convert("RGBA")
-                          inner  = int(size * 0.72)
-                          icon   = icon.resize((inner, inner), Image.LANCZOS)
-                          fg_img.paste(icon, ((size - inner) // 2,) * 2, icon)
-                      else:
-                          fg_img = letter_icon(size, bg="#00000000", fg=os.environ.get("ICON_FG_COLOR", "#FFFFFF"))
-                  except Exception:
-                      fg_img = letter_icon(size)
-                  fg_img.save(f"{p}/ic_launcher_foreground.png", "PNG", optimize=True)
+              adaptive_sizes = {
+                  "mipmap-mdpi": 108,
+                  "mipmap-hdpi": 162,
+                  "mipmap-xhdpi": 216,
+                  "mipmap-xxhdpi": 324,
+                  "mipmap-xxxhdpi": 432,
+              }
+              for folder, size in adaptive_sizes.items():
+                  fg = base_icon(size)
+                  fg.save(f"app/src/main/res/{folder}/ic_launcher_foreground.png")
 
+              # Background drawable (shape with colour)
+              bg_xml = f'''<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:shape="rectangle">
+              <solid android:color="{bg_color}" />
+          </shape>'''
               with open("app/src/main/res/drawable/ic_launcher_background.xml", "w") as f:
-                  f.write(f'<?xml version="1.0" encoding="utf-8"?>'
-                          f'<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">'
-                          f'<solid android:color="{bg_color}"/></shape>')
+                  f.write(bg_xml)
 
-              xml_base = (
-                  '<?xml version="1.0" encoding="utf-8"?>'
-                  '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">'
-                  '<background android:drawable="@drawable/ic_launcher_background"/>'
-                  '<foreground android:drawable="@mipmap/ic_launcher_foreground"/>'
-              )
-              if monochrome:
-                  m = letter_icon(108, bg="#FFFFFF", fg="#000000").convert("LA").convert("RGBA")
-                  m.save("app/src/main/res/drawable/ic_launcher_monochrome.png", "PNG", optimize=True)
-                  xml_base += '<monochrome android:drawable="@drawable/ic_launcher_monochrome"/>'
-              xml_base += '</adaptive-icon>'
+              # Adaptive icon XML
+              adaptive_xml = f'''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>'''
+              with open("app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml", "w") as f:
+                  f.write(adaptive_xml)
+              with open("app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml", "w") as f:
+                  f.write(adaptive_xml)
+          PYTHON_SCRIPT
 
-              for n in ["ic_launcher", "ic_launcher_round"]:
-                  with open(f"app/src/main/res/mipmap-anydpi-v26/{n}.xml", "w") as f:
-                      f.write(xml_base)
-
-          print("Icons generated")
-          ICONPY
-
-      # ── Step: Splash ─────────────────────────────────────────────────────────
-      - name: Generate splash screen
+      # ---------------------------------------------------------------
+      #  GENERATE SPLASH SCREEN (CUSTOM IMAGE + ANDROID 12+)
+      # ---------------------------------------------------------------
+      - name: 🌊 Splash screen (custom image & Android 12 API)
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
+          set -e
           cd app/android
 
+          SPLASH_IMG="/tmp/splash_input.png"
           if [[ -n "${SPLASH_IMAGE_URL}" ]]; then
-            curl -fsSL --connect-timeout 15 --retry 3 "${SPLASH_IMAGE_URL}" -o /tmp/splash_input.png 2>/dev/null || true
+            curl -fsSL "${SPLASH_IMAGE_URL}" -o "$SPLASH_IMG" || true
           fi
 
-          python3 << 'SPLASHPY'
-          import os, pathlib
+          # Generate splash drawable using Python
+          python3 - <<'PYSPLASH'
+          import os
           from PIL import Image
 
-          app_color  = os.environ.get("APP_COLOR", "#111827")
-          splash_path = pathlib.Path("/tmp/splash_input.png")
+          app_color = os.environ["APP_COLOR"]
+          splash_url = os.environ["SPLASH_IMAGE_URL"]
+          splash_img = "/tmp/splash_input.png"
+          out_path = "app/src/main/res/drawable/splash.png"
 
-          def h2r(h):
-              h = h.lstrip("#")
-              h = h * 2 if len(h) == 3 else h
-              return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+          # Create base splash background
+          splash = Image.new("RGBA", (1080, 1920), app_color)
 
-          bg = (*h2r(app_color), 255)
-          splash = Image.new("RGBA", (1080, 1920), bg)
-          if splash_path.exists() and splash_path.stat().st_size > 1024:
+          if splash_url and os.path.exists(splash_img):
               try:
-                  img  = Image.open(splash_path).convert("RGBA")
-                  nw   = 1080
-                  nh   = int(nw * img.size[1] / img.size[0])
-                  img  = img.resize((nw, nh), Image.LANCZOS)
-                  splash.alpha_composite(img, (0, (1920 - nh) // 2))
-              except Exception as ex:
-                  print(f"WARNING: Could not process splash image: {ex}")
+                  img = Image.open(splash_img).convert("RGBA")
+                  # Resize to fit width, keep aspect
+                  w_percent = 1080 / float(img.size[0])
+                  h_size = int(float(img.size[1]) * float(w_percent))
+                  img = img.resize((1080, h_size), Image.LANCZOS)
+                  y = (1920 - h_size) // 2
+                  splash.alpha_composite(img, (0, y))
+              except Exception:
+                  pass
+          splash.save(out_path)
+          PYSPLASH
 
-          splash.convert("RGB").save("app/src/main/res/drawable/splash.png", "PNG", optimize=True)
-          Image.new("RGB", (1920, 1080), h2r(app_color)).save(
-              "app/src/main/res/drawable/splash_land.png", "PNG", optimize=True
-          )
-          print("Splash screens generated")
-          SPLASHPY
+          # Android 12+ splash screen (theme)
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/values-v31
 
-          cp app/src/main/res/drawable/splash.png app/src/main/res/drawable-night/splash.png
+          cat > app/src/main/res/values/themes.xml <<THEME_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+                  <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+                  <item name="android:navigationBarColor">@color/navigationBarColor</item>
+              </style>
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:windowBackground">@drawable/splash</item>
+              </style>
+          </resources>
+          THEME_EOF
 
-      # ── Step: MainActivity ───────────────────────────────────────────────────
-      - name: Generate MainActivity.java
+          # v31 uses the splash screen API (icon + background)
+          cat > app/src/main/res/values-v31/themes.xml <<THEME31_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+                  <item name="android:windowSplashScreenBackground">${APP_COLOR}</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+                  <item name="android:windowSplashScreenAnimationDuration">${SPLASH_DURATION}</item>
+                  <item name="android:windowSplashScreenBrandingImage">@drawable/splash</item>
+                  <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+              </style>
+          </resources>
+          THEME31_EOF
+
+      # ---------------------------------------------------------------
+      #  INJECT CUSTOM JS / CSS / OFFLINE PAGE
+      # ---------------------------------------------------------------
+      - name: 📜 Inject custom code & offline fallback
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app/android
+          set -e
+          cd app
 
-          JAVA_DIR="app/src/main/java/$(echo "${APP_ID}" | tr '.' '/')"
-          mkdir -p "${JAVA_DIR}"
-
-          case "${CACHE_MODE}" in
-            cache_else_network) CACHE_CONST="WebSettings.LOAD_CACHE_ELSE_NETWORK" ;;
-            cache_only)         CACHE_CONST="WebSettings.LOAD_CACHE_ONLY" ;;
-            no_cache)           CACHE_CONST="WebSettings.LOAD_NO_CACHE" ;;
-            *)                  CACHE_CONST="WebSettings.LOAD_DEFAULT" ;;
-          esac
-
-          [[ "${MIXED_CONTENT}" == "true" ]] \
-            && MIXED_MODE="WebSettings.MIXED_CONTENT_ALWAYS_ALLOW" \
-            || MIXED_MODE="WebSettings.MIXED_CONTENT_NEVER_ALLOW"
-
-          cat > "${JAVA_DIR}/MainActivity.java" << JAVAEOF
-          package ${APP_ID};
-          // Ultimate WebView App Builder - MainActivity
-          // Created by ${CREATOR} - Instagram: ${CREATOR_INSTAGRAM}
-          import android.Manifest;
-          import android.app.DownloadManager;
-          import android.content.Intent;
-          import android.content.pm.PackageManager;
-          import android.graphics.Color;
-          import android.net.Uri;
-          import android.os.Build;
-          import android.os.Bundle;
-          import android.os.Environment;
-          import android.view.View;
-          import android.view.Window;
-          import android.view.WindowInsetsController;
-          import android.view.WindowManager;
-          import android.webkit.*;
-          import android.widget.Toast;
-          import androidx.annotation.NonNull;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
-          import com.getcapacitor.BridgeActivity;
-          import java.util.ArrayList;
-          import java.util.List;
-
-          public class MainActivity extends BridgeActivity {
-              private static final String TAG = "${APP_NAME}";
-              private static final int PERMISSION_REQUEST_CODE = 1001;
-              private static final int FILE_CHOOSER_REQUEST    = 1002;
-              private ValueCallback<Uri[]> fileChooserCallback;
-
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  configureWindow();
-                  try { configureWebView(); } catch (Exception e) { android.util.Log.e(TAG, "WebView config error", e); }
-                  requestRequiredPermissions();
-              }
-
-              private void configureWindow() {
-                  Window w = getWindow();
-                  if (${HARDWARE_ACCELERATION}) {
-                      w.setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
-                  }
-                  if (${KEEP_SCREEN_ON}) {
-                      w.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                  }
-                  try { w.setStatusBarColor(Color.parseColor("${STATUS_BAR_COLOR}")); }
-                  catch (Exception e) { w.setStatusBarColor(Color.BLACK); }
-                  try { w.setNavigationBarColor(Color.parseColor("${NAVIGATION_BAR_COLOR}")); }
-                  catch (Exception e) { w.setNavigationBarColor(Color.BLACK); }
-
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                      WindowInsetsController c = w.getInsetsController();
-                      if (c != null) {
-                          int flags = 0;
-                          if ("dark".equals("${STATUS_BAR_STYLE}"))     flags |= WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS;
-                          if ("dark".equals("${NAVIGATION_BAR_STYLE}")) flags |= WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
-                          c.setSystemBarsAppearance(flags,
-                              WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS |
-                              WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-                      }
-                  }
-                  if (${FULLSCREEN}) {
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                          w.setDecorFitsSystemWindows(false);
-                      } else {
-                          w.getDecorView().setSystemUiVisibility(
-                              View.SYSTEM_UI_FLAG_FULLSCREEN |
-                              View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                              View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-                      }
-                  }
-              }
-
-              private void configureWebView() {
-                  WebView wv = this.bridge.getWebView();
-                  if (wv == null) return;
-                  WebSettings s = wv.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(${DOM_STORAGE});
-                  s.setDatabaseEnabled(true);
-                  s.setAllowFileAccess(true);
-                  s.setGeolocationEnabled(${ENABLE_LOCATION});
-                  s.setMediaPlaybackRequiresUserGesture(!${MEDIA_AUTOPLAY});
-                  s.setLoadWithOverviewMode(true);
-                  s.setUseWideViewPort(true);
-                  s.setSupportZoom(${ENABLE_ZOOM});
-                  s.setBuiltInZoomControls(${ENABLE_ZOOM});
-                  s.setDisplayZoomControls(false);
-                  s.setSaveFormData(true);
-                  s.setTextZoom(100);
-                  s.setCacheMode(${CACHE_CONST});
-                  s.setMixedContentMode(${MIXED_MODE});
-                  s.setUserAgentString(s.getUserAgentString() + " ${USER_AGENT_SUFFIX}");
-                  wv.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-                  wv.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
-
-                  CookieManager cm = CookieManager.getInstance();
-                  cm.setAcceptCookie(true);
-                  cm.setAcceptThirdPartyCookies(wv, ${COOKIE_PERSISTENCE});
-
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && ${SERVICE_WORKER}) {
-                      ServiceWorkerController.getInstance().setServiceWorkerClient(
-                          new ServiceWorkerClient() {
-                              @Override public WebResourceResponse shouldInterceptRequest(WebResourceRequest r) { return null; }
-                          }
-                      );
-                  }
-
-                  wv.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
-                          String url = req.getUrl().toString();
-                          String allowNav = "${ALLOW_NAVIGATION}";
-                          if (url.startsWith("${WEBSITE_URL}")) return false;
-                          if ("*".equals(allowNav)) return false;
-                          String host = req.getUrl().getHost();
-                          if (host != null) {
-                              for (String a : allowNav.split(",")) {
-                                  a = a.trim();
-                                  boolean matches = a.startsWith("*.") ? host.endsWith(a.substring(2)) : host.equals(a);
-                                  if (matches) return false;
-                              }
-                          }
-                          if ("system_browser".equals("${EXTERNAL_LINKS}")) {
-                              try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
-                              catch (Exception ignored) {}
-                              return true;
-                          }
-                          if ("in_app_browser".equals("${EXTERNAL_LINKS}")) return false;
-                          return true;
-                      }
-                      @Override
-                      public void onReceivedSslError(WebView v, SslErrorHandler h, android.net.http.SslError e) {
-                          if ("permissive".equals("${SSL_ERROR_HANDLING}")) h.proceed(); else h.cancel();
-                      }
-                      @Override
-                      public void onPageFinished(WebView v, String url) {
-                          super.onPageFinished(v, url);
-                          String css = "${CUSTOM_CSS}".replace("\"", "\\\"").replace("\n", "\\n");
-                          if (!css.isEmpty()) {
-                              v.evaluateJavascript(
-                                  "javascript:(function(){var s=document.createElement('style');"
-                                  + "s.appendChild(document.createTextNode('" + css + "'));"
-                                  + "document.head.appendChild(s)})()", null);
-                          }
-                          String font = "${CUSTOM_FONT_URL}";
-                          if (!font.isEmpty()) {
-                              v.evaluateJavascript(
-                                  "javascript:(function(){var l=document.createElement('link');"
-                                  + "l.rel='stylesheet';l.href='" + font + "';"
-                                  + "document.head.appendChild(l)})()", null);
-                          }
-                          String js = "${CUSTOM_JS}";
-                          if (!js.isEmpty()) {
-                              v.evaluateJavascript("javascript:(function(){" + js + "})()", null);
-                          }
-                          if (${PWA_DETECTION}) {
-                              v.evaluateJavascript(
-                                  "javascript:window.__NATIVE_APP__=true;"
-                                  + "window.__APP_VERSION__='${VERSION_NAME}';", null);
-                          }
-                      }
-                  });
-
-                  wv.setWebChromeClient(new WebChromeClient() {
-                      @Override
-                      public void onPermissionRequest(PermissionRequest req) {
-                          List<String> granted = new ArrayList<>();
-                          for (String r : req.getResources()) {
-                              if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r) && ${ENABLE_CAMERA})     granted.add(r);
-                              else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r) && ${ENABLE_MICROPHONE}) granted.add(r);
-                              else if (PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID.equals(r))               granted.add(r);
-                          }
-                          if (!granted.isEmpty()) req.grant(granted.toArray(new String[0])); else req.deny();
-                      }
-                      @Override
-                      public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
-                          cb.invoke(origin, ${ENABLE_LOCATION}, false);
-                      }
-                      @Override
-                      public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
-                          if (!${ENABLE_FILE_PICKER}) { cb.onReceiveValue(null); return true; }
-                          fileChooserCallback = cb;
-                          try { startActivityForResult(p.createIntent(), FILE_CHOOSER_REQUEST); }
-                          catch (Exception e) { fileChooserCallback = null; return false; }
-                          return true;
-                      }
-                  });
-
-                  if (${ENABLE_DOWNLOADS}) {
-                      wv.setDownloadListener((url, ua, cd, mime, len) -> {
-                          try {
-                              DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-                              req.setMimeType(mime);
-                              req.addRequestHeader("cookie", CookieManager.getInstance().getCookie(url));
-                              req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                              String filename = url.substring(url.lastIndexOf("/") + 1);
-                              req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
-                              DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                              if (dm != null) {
-                                  dm.enqueue(req);
-                                  Toast.makeText(getApplicationContext(), "Download started", Toast.LENGTH_SHORT).show();
-                              }
-                          } catch (Exception e) { android.util.Log.e(TAG, "Download error", e); }
-                      });
-                  }
-              }
-
-              private void requestRequiredPermissions() {
-                  List<String> p = new ArrayList<>();
-                  if (${ENABLE_LOCATION} && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                      p.add(Manifest.permission.ACCESS_FINE_LOCATION);
-                      p.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-                  }
-                  if (${ENABLE_CAMERA} && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                      p.add(Manifest.permission.CAMERA);
-                  }
-                  if (${ENABLE_MICROPHONE} && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                      p.add(Manifest.permission.RECORD_AUDIO);
-                  }
-                  if (${ENABLE_NOTIFICATIONS} && Build.VERSION.SDK_INT >= 33 &&
-                      ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                      p.add(Manifest.permission.POST_NOTIFICATIONS);
-                  }
-                  if (!p.isEmpty()) ActivityCompat.requestPermissions(this, p.toArray(new String[0]), PERMISSION_REQUEST_CODE);
-              }
-
-              @Override
-              public void onRequestPermissionsResult(int code, @NonNull String[] perms, @NonNull int[] results) {
-                  super.onRequestPermissionsResult(code, perms, results);
-              }
-
-              @Override
-              protected void onActivityResult(int req, int res, Intent data) {
-                  if (req == FILE_CHOOSER_REQUEST && fileChooserCallback != null) {
-                      Uri[] uris = null;
-                      if (res == RESULT_OK && data != null) {
-                          String ds = data.getDataString();
-                          if (ds != null) {
-                              uris = new Uri[]{Uri.parse(ds)};
-                          } else if (data.getClipData() != null) {
-                              int count = data.getClipData().getItemCount();
-                              uris = new Uri[count];
-                              for (int i = 0; i < count; i++) uris[i] = data.getClipData().getItemAt(i).getUri();
-                          }
-                      }
-                      fileChooserCallback.onReceiveValue(uris);
-                      fileChooserCallback = null;
-                  }
-                  super.onActivityResult(req, res, data);
-              }
-
-              @Override
-              public void onBackPressed() {
-                  WebView wv = this.bridge.getWebView();
-                  if (${DISABLE_BACK_BUTTON} && wv != null && wv.canGoBack()) wv.goBack();
-                  else super.onBackPressed();
-              }
-
-              @Override
-              protected void onPause() {
-                  super.onPause();
-                  if (${COOKIE_PERSISTENCE}) CookieManager.getInstance().flush();
-              }
-          }
-          JAVAEOF
-          echo "MainActivity.java generated"
-
-      # ── Step: ProGuard ───────────────────────────────────────────────────────
-      - name: Generate ProGuard rules
-        run: |
-          source /tmp/expanded/expanded.env
-          cat > app/android/app/proguard-rules.pro << EOF
-          -keep class com.getcapacitor.** { *; }
-          -keep class ${APP_ID}.** { *; }
-          -keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
-          -keep class android.webkit.** { *; }
-          -keepattributes *Annotation*, SourceFile, LineNumberTable, Signature, Exceptions
-          -assumenosideeffects class android.util.Log {
-              public static int v(...);
-              public static int d(...);
-          }
-          -keep class kotlin.** { *; }
-          -dontwarn kotlin.**
-          -dontwarn okhttp3.**
-          -dontwarn okio.**
-          -dontwarn retrofit2.**
-          EOF
-
-      # ── Step: Keystore ───────────────────────────────────────────────────────
-      - name: Setup signing keystore
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app/android
-
-          if [[ -n "${KEYSTORE_B64}" ]]; then
-            echo "${KEYSTORE_B64}" | base64 -d > keystore.jks
-            echo "Keystore decoded from base64 input"
-          else
-            keytool -genkeypair -v \
-              -keystore keystore.jks \
-              -alias "${KEY_ALIAS}" \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "${KEYSTORE_PASS}" \
-              -keypass "${KEY_PASS}" \
-              -dname "CN=${APP_NAME}, OU=App, O=App, L=Unknown, ST=Unknown, C=US" 2>&1 \
-              && echo "Keystore generated via keytool" \
-              || { cp "${ANDROID_HOME}/debug.keystore" keystore.jks 2>/dev/null && echo "Fell back to debug keystore"; }
+          # Custom JavaScript injection – we'll embed a script in www/index.html
+          if [[ -n "${CUSTOM_JS}" ]]; then
+            mkdir -p www/js
+            echo "${CUSTOM_JS}" > www/js/custom.js
+            sed -i "s|</head>|<script src=\"js/custom.js\"></script></head>|" www/index.html
           fi
 
-          ls -lh keystore.jks
+          # Custom CSS injection
+          if [[ -n "${CUSTOM_CSS}" ]]; then
+            mkdir -p www/css
+            echo "${CUSTOM_CSS}" > www/css/custom.css
+            sed -i "s|</head>|<link rel=\"stylesheet\" href=\"css/custom.css\"></head>|" www/index.html
+          fi
 
-      # ── Step: Build debug APK ────────────────────────────────────────────────
-      - name: Build debug APK
-        if: env.BUILD_TYPE == 'debug' || env.BUILD_TYPE == 'both'
+          # Offline fallback page
+          if [[ -n "${OFFLINE_HTML}" ]]; then
+            echo "${OFFLINE_HTML}" > www/offline.html
+            # (Could add a service worker, but for simplicity we just place the file)
+          fi
+
+      # ---------------------------------------------------------------
+      #  MAIN ACTIVITY PATCH – WebView behaviour
+      # ---------------------------------------------------------------
+      - name: 🧠 Patch MainActivity (zoom, fullscreen, back button, user agent, cache)
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
+          set -e
           cd app/android
-          chmod +x gradlew
 
-          for attempt in 1 2 3; do
-            echo "assembleDebug — attempt $attempt/3"
-            if ./gradlew assembleDebug \
-                --no-daemon \
-                --stacktrace \
-                -Pandroid.useAndroidX=true \
-                -Pandroid.enableJetifier=true \
-                2>&1; then
-              echo "Debug APK built successfully"
-              break
-            fi
-            if [[ $attempt -eq 3 ]]; then
-              echo "ERROR: assembleDebug failed after 3 attempts"
-              exit 1
-            fi
-            echo "Cleaning and retrying in 20s..."
-            ./gradlew clean --no-daemon 2>&1 || true
-            sleep 20
-          done
-
-      # ── Step: Build release APK ──────────────────────────────────────────────
-      - name: Build release APK
-        if: |
-          (env.BUILD_TYPE == 'release' || env.BUILD_TYPE == 'both') &&
-          (env.ANDROID_OUTPUT == 'apk' || env.ANDROID_OUTPUT == 'both')
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app/android
-          chmod +x gradlew
-
-          for attempt in 1 2 3; do
-            echo "assembleRelease — attempt $attempt/3"
-            if ./gradlew assembleRelease \
-                --no-daemon \
-                --stacktrace \
-                -Pandroid.useAndroidX=true \
-                -Pandroid.enableJetifier=true \
-                2>&1; then
-              echo "Release APK built successfully"
-              break
-            fi
-            if [[ $attempt -eq 3 ]]; then
-              echo "ERROR: assembleRelease failed after 3 attempts"
-              exit 1
-            fi
-            ./gradlew clean --no-daemon 2>&1 || true
-            sleep 20
-          done
-
-      # ── Step: Build release AAB ──────────────────────────────────────────────
-      - name: Build release AAB
-        if: |
-          (env.BUILD_TYPE == 'release' || env.BUILD_TYPE == 'both') &&
-          (env.ANDROID_OUTPUT == 'aab' || env.ANDROID_OUTPUT == 'both')
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd app/android
-          chmod +x gradlew
-
-          for attempt in 1 2 3; do
-            echo "bundleRelease — attempt $attempt/3"
-            if ./gradlew bundleRelease \
-                --no-daemon \
-                --stacktrace \
-                -Pandroid.useAndroidX=true \
-                -Pandroid.enableJetifier=true \
-                2>&1; then
-              echo "Release AAB built successfully"
-              break
-            fi
-            if [[ $attempt -eq 3 ]]; then
-              echo "ERROR: bundleRelease failed after 3 attempts"
-              exit 1
-            fi
-            ./gradlew clean --no-daemon 2>&1 || true
-            sleep 20
-          done
-
-      # ── Step: Zipalign ───────────────────────────────────────────────────────
-      - name: Align and verify APK artifacts
-        if: always()
-        run: |
-          if [[ ! -d "app/android" ]]; then
-            echo "WARNING: app/android not found — skipping alignment (a previous step likely failed)"
+          MAIN="app/src/main/java/$(echo "${APP_ID}" | tr '.' '/')/MainActivity.java"
+          if [[ ! -f "$MAIN" ]]; then
+            echo "MainActivity not found, skipping patch"
             exit 0
           fi
 
-          BUILD_TOOLS=$(ls "${ANDROID_HOME}/build-tools/" 2>/dev/null | sort -rV | head -1)
-          ZIPALIGN="${ANDROID_HOME}/build-tools/${BUILD_TOOLS}/zipalign"
-          APKSIGNER="${ANDROID_HOME}/build-tools/${BUILD_TOOLS}/apksigner"
+          # Map cache mode string to Android constant
+          case "${CACHE_MODE}" in
+            cache_else_network)  CACHE_CONST="LOAD_CACHE_ELSE_NETWORK" ;;
+            network_else_cache)  CACHE_CONST="LOAD_DEFAULT" ;;  # default is network then cache
+            cache_only)          CACHE_CONST="LOAD_CACHE_ONLY" ;;
+            *)                   CACHE_CONST="LOAD_DEFAULT" ;;
+          esac
 
-          APK_COUNT=0
-          while IFS= read -r apk; do
-            APK_COUNT=$((APK_COUNT+1))
-            echo "Processing: $apk"
-            # Zipalign
-            if [[ -x "${ZIPALIGN}" ]]; then
-              ALIGNED="${apk%.apk}-aligned.apk"
-              "${ZIPALIGN}" -v 4 "$apk" "$ALIGNED" 2>&1 && mv "$ALIGNED" "$apk" || true
-            fi
-            echo "  Size: $(du -sh "$apk" | cut -f1)"
-          done < <(find app/android -name "*.apk" -type f 2>/dev/null)
+          cat > "$MAIN" <<JAVA_EOF
+          package ${APP_ID};
 
-          if [[ $APK_COUNT -eq 0 ]]; then
-            echo "No APKs found (build may have been debug-only or not yet complete)"
-          else
-            echo "Aligned $APK_COUNT APK(s)"
+          import android.os.Bundle;
+          import android.view.KeyEvent;
+          import android.view.View;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  // Fullscreen immersive mode
+                  if ("${FULLSCREEN}".equals("true")) {
+                      getWindow().getDecorView().setSystemUiVisibility(
+                          View.SYSTEM_UI_FLAG_FULLSCREEN
+                          | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                          | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                          | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                          | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                          | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                      );
+                  }
+
+                  try {
+                      WebView webView = this.bridge.getWebView();
+                      WebSettings settings = webView.getSettings();
+
+                      settings.setJavaScriptEnabled(true);
+                      settings.setDomStorageEnabled(true);
+                      settings.setDatabaseEnabled(true);
+                      settings.setMediaPlaybackRequiresUserGesture(false);
+                      settings.setLoadWithOverviewMode(true);
+                      settings.setUseWideViewPort(true);
+                      settings.setBuiltInZoomControls(${ENABLE_ZOOM});
+                      settings.setDisplayZoomControls(false);
+                      settings.setSupportZoom(${ENABLE_ZOOM});
+
+                      // User agent
+                      String ua = settings.getUserAgentString() + " ${USER_AGENT_SUFFIX}";
+                      settings.setUserAgentString(ua);
+
+                      // Cache mode
+                      settings.setCacheMode(WebSettings.${CACHE_CONST});
+
+                      // Pull-to-refresh is handled via a Capacitor plugin if desired;
+                      // we can't easily add it in native code without extra deps.
+
+                  } catch (Exception ignored) {}
+              }
+
+              // Override back button to stay inside WebView (if requested)
+              @Override
+              public void onBackPressed() {
+                  if ("${DISABLE_BACK_BUTTON}".equals("true")) {
+                      // Do nothing, or go back in WebView history
+                      WebView webView = this.bridge.getWebView();
+                      if (webView != null && webView.canGoBack()) {
+                          webView.goBack();
+                      }
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          JAVA_EOF
+
+      # ---------------------------------------------------------------
+      #  SET VERSION IN BUILD.GRADLE
+      # ---------------------------------------------------------------
+      - name: 🔢 Set version code & version name
+        shell: bash
+        run: |
+          set -e
+          cd app/android
+          if grep -q "versionCode " app/build.gradle; then
+            sed -i "s/versionCode .*/versionCode ${VERSION_CODE}/g" app/build.gradle || true
+          fi
+          if grep -q "versionName " app/build.gradle; then
+            sed -i "s/versionName .*/versionName \"${VERSION_NAME}\"/g" app/build.gradle || true
           fi
 
-      # ── Step: Release notes ──────────────────────────────────────────────────
-      - name: Generate release notes
-        if: always()
+      # ---------------------------------------------------------------
+      #  BUILD APK
+      # ---------------------------------------------------------------
+      - name: 🔨 Build debug APK
+        if: env.ANDROID_OUTPUT == 'apk' || env.ANDROID_OUTPUT == 'both'
+        shell: bash
         run: |
-          source /tmp/expanded/expanded.env 2>/dev/null || true
-          VERSION_NAME="${VERSION_NAME:-unknown}"
-          VERSION_CODE="${VERSION_CODE:-0}"
-          cat > /tmp/release-notes.md << RELEASEEOF
-          # ${APP_NAME:-App} — Build Summary
-          **Version:** ${VERSION_NAME} (build ${VERSION_CODE})
-          **Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          **Created by:** ${CREATOR} — Instagram: ${CREATOR_INSTAGRAM}
+          cd app/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
 
-          | Property | Value |
-          |---|---|
-          | Website URL | ${WEBSITE_URL:-n/a} |
-          | Package ID  | ${APP_ID:-n/a} |
-          | Min Android | API ${MIN_SDK:-n/a} |
-          | Target Android | API ${TARGET_SDK:-n/a} |
-          | Build target | ${BUILD_TARGET} |
-          | Build type | ${BUILD_TYPE} |
+      # ---------------------------------------------------------------
+      #  BUILD UNSIGNED AAB
+      # ---------------------------------------------------------------
+      - name: 📦 Build release AAB (unsigned)
+        if: env.ANDROID_OUTPUT == 'aab' || env.ANDROID_OUTPUT == 'both'
+        shell: bash
+        run: |
+          cd app/android
+          chmod +x gradlew
+          ./gradlew bundleRelease --stacktrace
 
-          *Built with Ultimate WebView App Builder by ${CREATOR} — ${CREATOR_INSTAGRAM}*
-          RELEASEEOF
-          cat /tmp/release-notes.md >> "$GITHUB_STEP_SUMMARY" || true
-
-      # ── Artifact uploads ─────────────────────────────────────────────────────
-      - name: Upload debug APK
+      # ---------------------------------------------------------------
+      #  UPLOAD ARTIFACTS
+      # ---------------------------------------------------------------
+      - name: 📤 Upload APK
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ github.run_number }}-debug-apk
+          name: android-debug-apk
           path: app/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: ignore
-          retention-days: 30
 
-      - name: Upload release APK
+      - name: 📤 Upload AAB (unsigned)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ github.run_number }}-release-apk
-          path: app/android/app/build/outputs/apk/release/*.apk
-          if-no-files-found: ignore
-          retention-days: 90
-
-      - name: Upload release AAB
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-${{ github.run_number }}-release-aab
+          name: android-release-aab-unsigned
           path: app/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: ignore
-          retention-days: 90
 
-      - name: Upload keystore backup
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-${{ github.run_number }}-keystore
-          path: app/android/keystore.jks
-          if-no-files-found: ignore
-          retention-days: 90
-
-      - name: Upload release notes
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-${{ github.run_number }}-release-notes
-          path: /tmp/release-notes.md
-          if-no-files-found: ignore
-          retention-days: 30
-
-  # ===========================================================================
-  # JOB 3 — iOS BUILD
-  # ===========================================================================
-
+  # ===================================================================
+  #  iOS BUILD
+  # ===================================================================
   ios:
-    name: Build iOS Xcode Project
-    needs: validate
-    if: |
-      needs.validate.outputs.valid == 'true' &&
-      (github.event.inputs.build_target == 'ios' || github.event.inputs.build_target == 'both')
+    name: 🍏 Build iOS Xcode project
+    if: env.BUILD_TARGET == 'ios' || env.BUILD_TARGET == 'both'
     runs-on: macos-latest
-    timeout-minutes: 60
 
     steps:
-
-      - name: Download expanded env
-        uses: actions/download-artifact@v4
-        with:
-          name: expanded-env
-          path: /tmp/expanded
-
-      - name: Setup Node.js 20 LTS
+      - name: ⚙️ Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      - name: Check tools
+      - name: 🧱 Create Capacitor iOS project
+        shell: bash
         run: |
-          xcode-select --print-path
-          xcodebuild -version
-          node --version
-          npm --version
-          pod --version 2>/dev/null || echo "CocoaPods not installed — will install"
+          set -e
+          mkdir app && cd app
 
-      - name: Install CocoaPods if needed
-        run: |
-          if ! pod --version &>/dev/null; then
-            sudo gem install cocoapods --no-document 2>&1
-          fi
-
-      - name: Install npm packages
-        run: |
-          set -euo pipefail
-          mkdir -p ios_app
-          cd ios_app
           npm init -y
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest
+          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest
+          npm install @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest
 
-          for attempt in 1 2 3 4 5; do
-            echo "npm install attempt $attempt/5..."
-            npm install \
-              @capacitor/core@6 \
-              @capacitor/cli@6 \
-              @capacitor/ios@6 \
-              @capacitor/status-bar@6 \
-              @capacitor/splash-screen@6 \
-              @capacitor/app@6 \
-              @capacitor/keyboard@6 \
-              @capacitor/network@6 \
-              --legacy-peer-deps --no-audit --no-fund 2>&1 && break
-            if [[ $attempt -eq 5 ]]; then
-              echo "ERROR: npm install failed after 5 attempts"
-              exit 1
-            fi
-            sleep 15
-          done
-
-      - name: Generate iOS loader and Capacitor config
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd ios_app
           mkdir -p www
-
-          cat > www/index.html << HTMLEOF
+          cat > www/index.html <<'HTML_IOS'
           <!DOCTYPE html>
-          <html lang="en">
+          <html>
           <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="theme-color" content="${APP_COLOR}">
             <title>${APP_NAME}</title>
             <style>
-              *{margin:0;padding:0;box-sizing:border-box}
-              html,body{width:100%;height:100%;background:${APP_COLOR};color:#FFF;
-                font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center}
-              .splash{display:flex;flex-direction:column;align-items:center;gap:20px}
-              .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);
-                border-top-color:#FFF;border-radius:50%;animation:spin .8s linear infinite}
-              @keyframes spin{to{transform:rotate(360deg)}}
-              .text{font-size:15px;font-weight:500;opacity:.8}
+              * { margin:0; padding:0; box-sizing:border-box; }
+              html,body{
+                width:100%; height:100%;
+                background:${APP_COLOR}; color:white;
+                font-family:Arial,sans-serif;
+                display:flex; align-items:center; justify-content:center;
+              }
+              .loader {
+                display:flex; align-items:center; justify-content:center;
+                flex-direction:column; gap:16px;
+              }
+              .spinner {
+                width:48px; height:48px;
+                border:5px solid rgba(255,255,255,.25);
+                border-top-color:white;
+                border-radius:50%;
+                animation:spin 1s linear infinite;
+              }
+              @keyframes spin { to{transform:rotate(360deg)} }
             </style>
           </head>
           <body>
-            <div class="splash">
-              <div class="spinner"></div>
-              <p class="text">${SPLASH_TEXT}</p>
-            </div>
-            <script>
-              window.__NATIVE_APP__ = true;
-              window.__APP_VERSION__ = '${VERSION_NAME}';
-            </script>
+            <div class="loader"><div class="spinner"></div><strong>${SPLASH_TEXT}</strong></div>
           </body>
           </html>
-          HTMLEOF
+          HTML_IOS
 
-          # Build allowNavigation array safely with jq
-          if [[ "${ALLOW_NAVIGATION}" == "*" ]]; then
-            NAV_ARRAY='"*"'
-          else
-            NAV_ARRAY=$(echo "${ALLOW_NAVIGATION}" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | \
-              python3 -c "import sys,json; lines=[l.strip() for l in sys.stdin if l.strip()]; print(','.join(json.dumps(l) for l in lines))")
-          fi
+          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
 
-          cat > capacitor.config.json << CAPEOF
+          cat > capacitor.config.json <<JSON_IOS
           {
             "appId": "${APP_ID}",
             "appName": "${APP_NAME}",
             "webDir": "www",
-            "bundledWebRuntime": false,
             "server": {
               "url": "${WEBSITE_URL}",
               "cleartext": ${ALLOW_HTTP},
-              "allowNavigation": [${NAV_ARRAY}]
-            },
-            "ios": {
-              "scheme": "${APP_NAME}",
-              "backgroundColor": "${APP_COLOR}",
-              "contentInset": "automatic",
-              "scrollEnabled": true,
-              "limitsNavigationsToAppBoundDomains": false
+              "allowNavigation": ["${ALLOW_NAVIGATION}"]
             },
             "plugins": {
               "SplashScreen": {
                 "launchShowDuration": ${SPLASH_DURATION},
                 "launchAutoHide": true,
-                "launchFadeOutDuration": ${SPLASH_FADE},
                 "backgroundColor": "${APP_COLOR}",
-                "showSpinner": false
+                "showSpinner": true,
+                "spinnerColor": "#ffffff"
               },
               "StatusBar": {
-                "style": "${IOS_STATUS_STYLE}",
-                "backgroundColor": "${STATUS_BAR_COLOR}",
-                "overlaysWebView": false
+                "style": "${IOS_STATUS_BAR_STYLE}",
+                "backgroundColor": "${STATUS_BAR_COLOR}"
+              },
+              "Keyboard": {
+                "resize": "body",
+                "style": "dark"
               }
             }
           }
-          CAPEOF
+          JSON_IOS
 
-          npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www 2>&1 || true
+          npx cap add ios
+          npx cap sync ios
 
-          for attempt in 1 2 3; do
-            echo "cap add ios — attempt $attempt/3"
-            if npx cap add ios 2>&1; then
-              echo "cap add ios succeeded"
-              break
-            fi
-            if [[ $attempt -eq 3 ]]; then
-              echo "ERROR: cap add ios failed after 3 attempts"
-              npm list --depth=0 2>&1 || true
-              exit 1
-            fi
-            sleep 20
-          done
+          # Create a zip of the Xcode project
+          zip -r ios-project.zip ios capacitor.config.json package.json package-lock.json www
 
-          npx cap sync ios 2>&1
-          echo "Capacitor iOS platform ready"
-
-      - name: Customize Info.plist
-        run: |
-          source /tmp/expanded/expanded.env
-          set -euo pipefail
-          cd ios_app
-
-          python3 << 'PLISTPY'
-          import os, re
-
-          # Find Info.plist (skip Pods)
-          plist_path = None
-          for root, dirs, files in os.walk("ios"):
-              dirs[:] = [d for d in dirs if d not in ("Pods", ".git")]
-              for f in files:
-                  if f == "Info.plist":
-                      plist_path = os.path.join(root, f)
-                      break
-              if plist_path:
-                  break
-
-          if not plist_path:
-              print("WARNING: Info.plist not found — skipping")
-              exit(0)
-
-          print(f"Patching: {plist_path}")
-          with open(plist_path) as f:
-              content = f.read()
-
-          def add_key(c, key, val):
-              if key not in c:
-                  c = c.replace("</dict>\n</plist>", f"\t<key>{key}</key>\n\t{val}\n</dict>\n</plist>")
-              return c
-
-          e = os.environ
-          content = add_key(content, "CFBundleDisplayName",      f'<string>{e.get("APP_NAME", "App")}</string>')
-          content = add_key(content, "CFBundleShortVersionString",f'<string>{e.get("VERSION_NAME", "1.0.0")}</string>')
-          content = add_key(content, "CFBundleVersion",           f'<string>{e.get("VERSION_CODE", "1")}</string>')
-          content = add_key(content, "MinimumOSVersion",          f'<string>{e.get("IOS_DEPLOYMENT", "14.0")}</string>')
-
-          if e.get("ENABLE_CAMERA") == "true":
-              content = add_key(content, "NSCameraUsageDescription",
-                  f'<string>{e.get("APP_NAME", "App")} requires camera access.</string>')
-          if e.get("ENABLE_MICROPHONE") == "true":
-              content = add_key(content, "NSMicrophoneUsageDescription",
-                  f'<string>{e.get("APP_NAME", "App")} requires microphone access.</string>')
-          if e.get("ENABLE_LOCATION") == "true":
-              content = add_key(content, "NSLocationWhenInUseUsageDescription",
-                  f'<string>{e.get("APP_NAME", "App")} requires location access.</string>')
-
-          if e.get("IOS_ATS_ALLOW_ALL") == "true":
-              content = add_key(content, "NSAppTransportSecurity",
-                  "<dict><key>NSAllowsArbitraryLoads</key><true/></dict>")
-
-          scheme = e.get("DEEP_LINK_SCHEME", "")
-          if scheme:
-              content = add_key(content, "CFBundleURLTypes",
-                  f'<array><dict><key>CFBundleURLSchemes</key><array><string>{scheme}</string></array></dict></array>')
-
-          bg = e.get("IOS_BG_MODES", "")
-          if bg:
-              modes = "".join(f"<string>{m.strip()}</string>" for m in bg.split(",") if m.strip())
-              content = add_key(content, "UIBackgroundModes", f"<array>{modes}</array>")
-
-          with open(plist_path, "w") as f:
-              f.write(content)
-          print("Info.plist updated")
-          PLISTPY
-
-      - name: CocoaPods install
-        run: |
-          set -euo pipefail
-          cd ios_app
-
-          PODFILE=$(find ios -name "Podfile" -not -path "*/Pods/*" 2>/dev/null | head -1 || true)
-          if [[ -z "${PODFILE}" ]]; then
-            echo "No Podfile found — skipping pod install"
-            exit 0
-          fi
-
-          PODFILE_DIR=$(dirname "${PODFILE}")
-          cd "${PODFILE_DIR}"
-
-          for attempt in 1 2 3; do
-            echo "pod install — attempt $attempt/3"
-            if pod install --repo-update 2>&1; then
-              echo "pod install succeeded"
-              break
-            fi
-            if [[ $attempt -eq 3 ]]; then
-              echo "WARNING: pod install failed — packaging Xcode project anyway"
-            fi
-            sleep 20
-          done
-
-      - name: Package iOS Xcode project
-        run: |
-          source /tmp/expanded/expanded.env
-          cd ios_app
-          ZIP_NAME="ios-xcode-${APP_NAME}-${VERSION_NAME}.zip"
-          zip -r "../${ZIP_NAME}" ios www capacitor.config.json package.json \
-            --exclude "*/node_modules/*" \
-            --exclude "*/.git/*" \
-            --exclude "*/Pods/*" \
-            2>&1
-          ls -lh "../${ZIP_NAME}"
-
-      - name: Upload iOS Xcode artifact
+      - name: 📤 Upload iOS project (unsigned)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ github.run_number }}-ios-xcode
-          path: "ios-xcode-${{ env.APP_NAME }}-*.zip"
+          name: ios-project-unsigned
+          path: app/ios-project.zip
           if-no-files-found: error
-          retention-days: 90
-
-  # ===========================================================================
-  # JOB 4 — GITHUB RELEASE (optional)
-  # ===========================================================================
-
-  release:
-    name: Create GitHub Release
-    needs: [validate, android, ios]
-    if: |
-      always() &&
-      needs.validate.outputs.valid == 'true' &&
-      github.event.inputs.create_github_release == 'true' &&
-      (needs.android.result == 'success' || needs.ios.result == 'success')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download expanded env
-        uses: actions/download-artifact@v4
-        with:
-          name: expanded-env
-          path: /tmp/expanded
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-          merge-multiple: false
-
-      - name: Compute release tag
-        run: |
-          source /tmp/expanded/expanded.env
-          TAG="v${VERSION_NAME}-${VERSION_CODE}-$(date -u +%Y%m%d%H%M%S)"
-          echo "RELEASE_TAG=${TAG}"           >> "$GITHUB_ENV"
-          echo "VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: "${{ env.APP_NAME }} v${{ env.VERSION_NAME }}"
-          body: |
-            **Website:** ${{ env.WEBSITE_URL }}
-            **Platform:** ${{ env.BUILD_TARGET }}
-            **Build type:** ${{ env.BUILD_TYPE }}
-
-            Created by ${{ env.CREATOR }} — Instagram: ${{ env.CREATOR_INSTAGRAM }}
-          files: |
-            release-artifacts/**/*.apk
-            release-artifacts/**/*.aab
-            release-artifacts/**/*.zip
-            release-artifacts/**/*.md
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
