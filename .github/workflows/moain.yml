@@ -1,17 +1,8 @@
-###############################################################################
-#  ULTIMATE NATIVE WEBVIEW APP BUILDER                                     #
-#  Produces Android APK/AAB and iOS Xcode project                          #
-#  - Fits GitHub’s 25‑input limit using extra_config_json                  #
-#  - Never opens external browser; all links stay inside the app            #
-#  - Full adaptive icon support, custom splash, offline page, …           #
-###############################################################################
-
 name: Ultimate WebView App Builder – Android & iOS (25 inputs)
 
 on:
   workflow_dispatch:
     inputs:
-      # ---------- Basic build targets ----------
       build_target:
         description: "Platform to build"
         required: true
@@ -22,7 +13,6 @@ on:
           - ios
           - both
 
-      # ---------- Core app info ----------
       website_url:
         description: "Your website URL (e.g. https://example.com)"
         required: true
@@ -48,7 +38,6 @@ on:
         required: true
         default: "1"
 
-      # ---------- Look & feel ----------
       app_color:
         description: "Main app background & theme color (HEX)"
         required: true
@@ -74,7 +63,6 @@ on:
         required: false
         default: ""
 
-      # ---------- Orientation & fullscreen ----------
       orientation:
         description: "Screen orientation"
         required: true
@@ -94,7 +82,6 @@ on:
           - "true"
           - "false"
 
-      # ---------- Network & navigation ----------
       allow_http:
         description: "Allow loading of plain http:// URLs"
         required: true
@@ -114,7 +101,6 @@ on:
         required: false
         default: "UltimateWebViewApp"
 
-      # ---------- WebView behaviour ----------
       enable_zoom:
         description: "Enable pinch‑to‑zoom"
         required: true
@@ -135,13 +121,11 @@ on:
           - network_else_cache
           - cache_only
 
-      # ---------- Icon ----------
       icon_url:
         description: "Optional direct PNG/JPG URL for app icon"
         required: false
         default: ""
 
-      # ---------- iOS specific ----------
       ios_status_bar_style:
         description: "iOS status bar style"
         required: false
@@ -151,7 +135,6 @@ on:
           - DARK
           - LIGHT
 
-      # ---------- Android output format ----------
       android_output:
         description: "Which package(s) to produce"
         required: true
@@ -162,13 +145,11 @@ on:
           - aab
           - both
 
-      # ---------- Offline fallback ----------
       offline_fallback_html:
         description: "HTML to show when offline (leave empty to skip)"
         required: false
         default: ""
 
-      # ---------- Advanced – all remaining customisations in one JSON input ----------
       extra_config_json:
         description: |
           JSON object for advanced settings. Leave empty for defaults.
@@ -186,8 +167,6 @@ on:
           }
         required: false
         default: "{}"
-
-      # (End of inputs – total = 25)
 
 permissions:
   contents: read
@@ -225,9 +204,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------------------------------------------------------
-      #  SETUP TOOLS
-      # ---------------------------------------------------------------
       - name: ⚙️ Setup Java 21
         uses: actions/setup-java@v4
         with:
@@ -247,14 +223,10 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install pillow
 
-      # ---------------------------------------------------------------
-      #  PARSE EXTRA CONFIG JSON
-      # ---------------------------------------------------------------
       - name: 🧩 Parse extra_config_json and export variables
         id: extra
         shell: bash
         run: |
-          # Extract each field from JSON, defaulting if missing
           echo "SPLASH_DURATION=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.splash_show_duration // "1500"')" >> $GITHUB_ENV
           echo "ADAPTIVE_ICON=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.adaptive_icon // true')" >> $GITHUB_ENV
           echo "ICON_FG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_foreground_color // "#FFFFFF"')" >> $GITHUB_ENV
@@ -263,17 +235,9 @@ jobs:
           echo "CUSTOM_CSS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_css // ""')" >> $GITHUB_ENV
           echo "PULL_TO_REFRESH=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.pull_to_refresh // false')" >> $GITHUB_ENV
           echo "DISABLE_BACK=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.disable_back_button // false')" >> $GITHUB_ENV
-
-          # Permissions as comma-separated string
           PERMS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.permissions // [] | join(",")')
           echo "PERMISSIONS=${PERMS}" >> $GITHUB_ENV
 
-          # Log what we got
-          echo "Parsed extra config: SPLASH_DURATION=${SPLASH_DURATION}, ADAPTIVE_ICON=${ADAPTIVE_ICON}, etc."
-
-      # ---------------------------------------------------------------
-      #  CREATE CAPACITOR PROJECT
-      # ---------------------------------------------------------------
       - name: 🧱 Create Capacitor Android project
         shell: bash
         run: |
@@ -284,7 +248,6 @@ jobs:
           npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
           npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest
           npm install @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest
-          npm install @capacitor/browser@latest
 
           mkdir -p www
           cat > www/index.html <<'HTML_EOF'
@@ -348,9 +311,6 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      # ---------------------------------------------------------------
-      #  CUSTOMISE ANDROID MANIFEST & RESOURCES
-      # ---------------------------------------------------------------
       - name: 🎨 Customize Android manifest & resources
         shell: bash
         run: |
@@ -358,7 +318,6 @@ jobs:
           cd app/android
           MANIFEST="app/src/main/AndroidManifest.xml"
 
-          # Essential permissions
           if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST"
           fi
@@ -366,7 +325,6 @@ jobs:
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
           fi
 
-          # Add permissions from extra config
           IFS=',' read -ra PERMS_ARRAY <<< "$PERMISSIONS"
           for perm in "${PERMS_ARRAY[@]}"; do
             case "$perm" in
@@ -409,9 +367,6 @@ jobs:
           </resources>
           XML_EOF
 
-      # ---------------------------------------------------------------
-      #  GENERATE ICONS (REGULAR + ADAPTIVE)
-      # ---------------------------------------------------------------
       - name: 🖼️ Generate all icons (standard & adaptive)
         shell: bash
         run: |
@@ -488,14 +443,12 @@ jobs:
                       f.write(f'<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@drawable/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>')
           PYTHON_SCRIPT
 
-      # ---------------------------------------------------------------
-      #  GENERATE SPLASH SCREEN
-      # ---------------------------------------------------------------
       - name: 🌊 Splash screen (custom image & Android 12 API)
         shell: bash
         run: |
           set -e
           cd app/android
+
           SPLASH_IMG="/tmp/splash_input.png"
           if [[ -n "${SPLASH_IMAGE_URL}" ]]; then
             curl -fsSL "${SPLASH_IMAGE_URL}" -o "$SPLASH_IMG" || true
@@ -523,6 +476,9 @@ jobs:
                   pass
           splash.save(out_path)
           PYSPLASH
+
+          # Remove default styles.xml to avoid duplicate AppTheme resources
+          rm -f app/src/main/res/values/styles.xml
 
           mkdir -p app/src/main/res/values app/src/main/res/values-v31
 
@@ -552,9 +508,6 @@ jobs:
           </resources>
           THEME31_EOF
 
-      # ---------------------------------------------------------------
-      #  INJECT CUSTOM CODE & OFFLINE PAGE
-      # ---------------------------------------------------------------
       - name: 📜 Inject custom code & offline fallback
         shell: bash
         run: |
@@ -574,9 +527,6 @@ jobs:
             echo "${OFFLINE_HTML}" > www/offline.html
           fi
 
-      # ---------------------------------------------------------------
-      #  MAIN ACTIVITY PATCH
-      # ---------------------------------------------------------------
       - name: 🧠 Patch MainActivity (zoom, fullscreen, back button, user agent, cache)
         shell: bash
         run: |
@@ -704,6 +654,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: 📦 Install jq (extra config parser)
+        shell: bash
+        run: brew install jq || true
+
+      - name: 🧩 Parse extra_config_json and export variables
+        shell: bash
+        run: |
+          echo "SPLASH_DURATION=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.splash_show_duration // "1500"')" >> $GITHUB_ENV
+          echo "ADAPTIVE_ICON=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.adaptive_icon // true')" >> $GITHUB_ENV
+          echo "ICON_FG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_foreground_color // "#FFFFFF"')" >> $GITHUB_ENV
+          echo "ICON_BG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_background_color // "#111827"')" >> $GITHUB_ENV
+          echo "CUSTOM_JS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_javascript // ""')" >> $GITHUB_ENV
+          echo "CUSTOM_CSS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_css // ""')" >> $GITHUB_ENV
+          echo "PULL_TO_REFRESH=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.pull_to_refresh // false')" >> $GITHUB_ENV
+          echo "DISABLE_BACK=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.disable_back_button // false')" >> $GITHUB_ENV
 
       - name: 🧱 Create Capacitor iOS project
         shell: bash
