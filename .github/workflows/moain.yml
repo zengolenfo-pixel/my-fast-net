@@ -502,6 +502,8 @@ jobs:
     timeout-minutes: 90
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Download expanded env
         uses: actions/download-artifact@v4
