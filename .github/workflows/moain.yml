@@ -516,7 +516,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: gradle
+          # cache: gradle  <-- removed because repo has no Gradle files at checkout
 
       - name: Setup Node.js 20 LTS
         uses: actions/setup-node@v4
@@ -1722,7 +1722,6 @@ jobs:
           done
 
       # ── Step: Zipalign ───────────────────────────────────────────────────────
-      # FIXED: guards against missing app/android directory when earlier steps fail
       - name: Align and verify APK artifacts
         if: always()
         run: |
