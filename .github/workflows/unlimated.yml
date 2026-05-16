@@ -1,106 +1,244 @@
-name: Ultimate Capacitor Android APK AAB + iOS Project
+name: 🚀 Ultimate Native App Builder — Android + iOS
 
 on:
   workflow_dispatch:
     inputs:
+      # ── Core Identity ─────────────────────────────────────────────────────
       build_target:
-        description: "android, ios, or both"
+        description: "🎯 Build target"
         required: true
         default: "android"
         type: choice
         options: [android, ios, both]
       app_name:
-        description: "App display name"
+        description: "📱 App display name"
         required: true
-        default: "My Website App"
+        default: "My App"
       app_id:
-        description: "Package ID like com.yourname.app"
+        description: "📦 Package ID (e.g. com.company.app)"
         required: true
         default: "com.example.myapp"
       website_url:
-        description: "Website URL loaded inside native WebView"
+        description: "🌐 Website URL to load inside app"
         required: true
         default: "https://example.com"
       version_name:
-        description: "Version name"
+        description: "🏷️ Version name (semver)"
         required: true
         default: "1.0.0"
       version_code:
-        description: "Android version code"
+        description: "🔢 Android version code (integer)"
         required: true
         default: "1"
+
+      # ── Output Format ─────────────────────────────────────────────────────
       android_output:
-        description: "Android output"
+        description: "📦 Android output type"
         required: true
-        default: "apk"
+        default: "both"
         type: choice
         options: [apk, aab, both]
+      sign_android:
+        description: "🔏 Sign Android release (needs keystore secrets)"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+      # ── Branding ──────────────────────────────────────────────────────────
       app_color:
-        description: "Main HEX color"
+        description: "🎨 Primary brand HEX color"
         required: true
-        default: "#111827"
+        default: "#1a1a2e"
       splash_background:
-        description: "Splash HEX color"
+        description: "🌊 Splash screen background HEX"
         required: true
-        default: "#111827"
+        default: "#1a1a2e"
       status_bar_color:
-        description: "Android status bar HEX"
+        description: "📊 Android status bar HEX"
         required: true
         default: "#000000"
       navigation_bar_color:
-        description: "Android navigation bar HEX"
+        description: "🔛 Android nav bar HEX"
         required: true
         default: "#000000"
       icon_url:
-        description: "Optional direct PNG/JPG icon URL"
+        description: "🖼️ Direct icon URL (PNG/JPG/SVG, 512x512+ recommended)"
         required: false
         default: ""
-      splash_text:
-        description: "Fallback loading text"
+      icon_bg_color:
+        description: "🎨 Icon background HEX (if icon has transparency)"
+        required: false
+        default: "#1a1a2e"
+      icon_shape:
+        description: "🔷 Adaptive icon shape"
         required: true
-        default: "Loading..."
+        default: "rounded"
+        type: choice
+        options: [rounded, circle, square]
+      splash_animation:
+        description: "✨ Splash screen style"
+        required: true
+        default: "spinner"
+        type: choice
+        options: [spinner, pulse, none]
+      splash_duration:
+        description: "⏱️ Splash display duration (ms)"
+        required: true
+        default: "2000"
+      splash_text:
+        description: "💬 Splash loading text (empty to hide)"
+        required: false
+        default: ""
+      dark_mode_icon:
+        description: "🌙 Generate dark mode adaptive icon"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+      # ── App Behavior ──────────────────────────────────────────────────────
       orientation:
-        description: "Android orientation"
+        description: "📐 Screen orientation"
         required: true
         default: "portrait"
         type: choice
-        options: [portrait, landscape, unspecified]
+        options: [portrait, landscape, unspecified, sensorPortrait, sensorLandscape, sensor]
       fullscreen:
-        description: "Fullscreen Android"
+        description: "⛶ Fullscreen (hide status+nav bars)"
         required: true
         default: "false"
         type: choice
         options: ["true", "false"]
       enable_zoom:
-        description: "Enable pinch zoom"
+        description: "🔍 Enable pinch-to-zoom"
         required: true
         default: "false"
         type: choice
         options: ["true", "false"]
       allow_http:
-        description: "Allow http instead of https"
+        description: "⚠️ Allow plain HTTP (cleartext)"
         required: true
         default: "false"
         type: choice
         options: ["true", "false"]
       user_agent_suffix:
-        description: "Extra WebView User-Agent text"
+        description: "🤖 Extra User-Agent string appended"
         required: false
-        default: "UltimateCapacitorApp"
+        default: ""
+      hardware_accel:
+        description: "⚡ Hardware acceleration"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      cache_mode:
+        description: "🗃️ WebView cache strategy"
+        required: true
+        default: "default"
+        type: choice
+        options: [default, no_cache, cache_only, cache_else_network]
+      geolocation:
+        description: "📍 Enable geolocation permission"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+      camera:
+        description: "📷 Enable camera permission"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+      microphone:
+        description: "🎤 Enable microphone permission"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+      push_notifications:
+        description: "🔔 Enable push notification permission"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+      deep_link_scheme:
+        description: "🔗 Custom deep link scheme (e.g. myapp, empty to skip)"
+        required: false
+        default: ""
+
+      # ── Navigation & UX ───────────────────────────────────────────────────
+      enable_back_navigation:
+        description: "⬅️ Android hardware back button navigates web history"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      pull_to_refresh:
+        description: "🔄 Pull-to-refresh support"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+      show_offline_page:
+        description: "📡 Show offline error page when no network"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      keep_screen_on:
+        description: "💡 Keep screen on while app is open"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+      allow_file_access:
+        description: "📂 Allow WebView file access (downloads/uploads)"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      mixed_content:
+        description: "🔀 Allow mixed HTTP/HTTPS content"
+        required: true
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+      # ── iOS Extras ────────────────────────────────────────────────────────
+      ios_deployment_target:
+        description: "🍎 iOS minimum deployment target"
+        required: true
+        default: "16.0"
+        type: choice
+        options: ["14.0", "15.0", "16.0", "17.0"]
+      ios_device:
+        description: "📱 iOS supported devices"
+        required: true
+        default: "universal"
+        type: choice
+        options: [universal, iphone, ipad]
+
+      # ── Release ───────────────────────────────────────────────────────────
       create_release:
-        description: "Create GitHub Release"
+        description: "🚀 Create GitHub Release"
         required: true
         default: "false"
         type: choice
         options: ["true", "false"]
       release_tag:
-        description: "Release tag"
+        description: "🏷️ Release tag name"
         required: true
         default: "v1.0.0"
+      release_notes:
+        description: "📝 Release notes / changelog"
+        required: false
+        default: "Initial release"
 
 permissions:
   contents: write
   actions: read
+  id-token: write
 
 env:
   APP_NAME: ${{ github.event.inputs.app_name }}
@@ -113,104 +251,308 @@ env:
   STATUS_BAR_COLOR: ${{ github.event.inputs.status_bar_color }}
   NAVIGATION_BAR_COLOR: ${{ github.event.inputs.navigation_bar_color }}
   ICON_URL: ${{ github.event.inputs.icon_url }}
+  ICON_BG_COLOR: ${{ github.event.inputs.icon_bg_color }}
+  ICON_SHAPE: ${{ github.event.inputs.icon_shape }}
+  SPLASH_ANIMATION: ${{ github.event.inputs.splash_animation }}
+  SPLASH_DURATION: ${{ github.event.inputs.splash_duration }}
   SPLASH_TEXT: ${{ github.event.inputs.splash_text }}
+  DARK_MODE_ICON: ${{ github.event.inputs.dark_mode_icon }}
   ORIENTATION: ${{ github.event.inputs.orientation }}
   FULLSCREEN: ${{ github.event.inputs.fullscreen }}
   ENABLE_ZOOM: ${{ github.event.inputs.enable_zoom }}
   ALLOW_HTTP: ${{ github.event.inputs.allow_http }}
   USER_AGENT_SUFFIX: ${{ github.event.inputs.user_agent_suffix }}
+  HARDWARE_ACCEL: ${{ github.event.inputs.hardware_accel }}
+  CACHE_MODE: ${{ github.event.inputs.cache_mode }}
+  GEOLOCATION: ${{ github.event.inputs.geolocation }}
+  CAMERA: ${{ github.event.inputs.camera }}
+  MICROPHONE: ${{ github.event.inputs.microphone }}
+  PUSH_NOTIFICATIONS: ${{ github.event.inputs.push_notifications }}
+  DEEP_LINK_SCHEME: ${{ github.event.inputs.deep_link_scheme }}
+  ENABLE_BACK_NAV: ${{ github.event.inputs.enable_back_navigation }}
+  PULL_TO_REFRESH: ${{ github.event.inputs.pull_to_refresh }}
+  SHOW_OFFLINE_PAGE: ${{ github.event.inputs.show_offline_page }}
+  KEEP_SCREEN_ON: ${{ github.event.inputs.keep_screen_on }}
+  ALLOW_FILE_ACCESS: ${{ github.event.inputs.allow_file_access }}
+  MIXED_CONTENT: ${{ github.event.inputs.mixed_content }}
+  IOS_DEPLOYMENT_TARGET: ${{ github.event.inputs.ios_deployment_target }}
+  IOS_DEVICE: ${{ github.event.inputs.ios_device }}
+  SIGN_ANDROID: ${{ github.event.inputs.sign_android }}
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# JOB 1 — VALIDATE
+# ═══════════════════════════════════════════════════════════════════════════════
 jobs:
   validate:
-    name: Validate Inputs
+    name: "🔍 Validate & Pre-flight"
     runs-on: ubuntu-latest
+    outputs:
+      build_android: ${{ steps.check.outputs.build_android }}
+      build_ios: ${{ steps.check.outputs.build_ios }}
     steps:
-      - name: Validate
+      - name: "🔍 Validate all inputs"
+        id: check
         shell: bash
         run: |
           set -e
-          echo "APP_NAME=$APP_NAME"
-          echo "APP_ID=$APP_ID"
-          echo "WEBSITE_URL=$WEBSITE_URL"
-          if [[ ! "$APP_ID" =~ ^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$ ]]; then
-            echo "Invalid app_id. Use com.yourname.app"
-            exit 1
-          fi
-          if [[ "$ALLOW_HTTP" == "false" && ! "$WEBSITE_URL" =~ ^https:// ]]; then
-            echo "Use https:// website or set allow_http true"
+
+          echo "════════════════════════════════════════"
+          echo "  Pre-flight checks"
+          echo "════════════════════════════════════════"
+          echo "App Name    : $APP_NAME"
+          echo "App ID      : $APP_ID"
+          echo "Website URL : $WEBSITE_URL"
+          echo "Target      : ${{ github.event.inputs.build_target }}"
+
+          # Validate package ID
+          if [[ ! "$APP_ID" =~ ^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*){1,}$ ]]; then
+            echo "❌ Invalid app_id '$APP_ID'. Must be like com.company.appname (min 2 segments, letters/numbers/underscores)"
             exit 1
           fi
 
+          # Validate URL
+          if [[ "$ALLOW_HTTP" == "false" && ! "$WEBSITE_URL" =~ ^https:// ]]; then
+            echo "❌ WEBSITE_URL must start with https:// when allow_http is false"
+            exit 1
+          fi
+          if [[ ! "$WEBSITE_URL" =~ ^https?:// ]]; then
+            echo "❌ WEBSITE_URL must start with http:// or https://"
+            exit 1
+          fi
+
+          # Validate version
+          if [[ ! "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ version_name must be semver like 1.0.0"
+            exit 1
+          fi
+          if [[ ! "$VERSION_CODE" =~ ^[0-9]+$ ]]; then
+            echo "❌ version_code must be a positive integer"
+            exit 1
+          fi
+
+          # Validate hex colors
+          for color_var in APP_COLOR SPLASH_BACKGROUND STATUS_BAR_COLOR NAVIGATION_BAR_COLOR; do
+            color="${!color_var}"
+            if [[ ! "$color" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+              echo "❌ $color_var '$color' is not a valid 6-digit hex color (e.g. #1a1a2e)"
+              exit 1
+            fi
+          done
+
+          # Set outputs
+          TARGET="${{ github.event.inputs.build_target }}"
+          echo "build_android=$( [[ "$TARGET" == "android" || "$TARGET" == "both" ]] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+          echo "build_ios=$( [[ "$TARGET" == "ios" || "$TARGET" == "both" ]] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+
+          echo "✅ All validations passed"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# JOB 2 — ANDROID
+# ═══════════════════════════════════════════════════════════════════════════════
   android:
-    name: Build Android APK/AAB
+    name: "🤖 Build Android"
     needs: validate
-    if: github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'both'
+    if: needs.validate.outputs.build_android == 'true'
     runs-on: ubuntu-latest
+
     steps:
-      - name: Setup Java 21
+      # ── Environment ────────────────────────────────────────────────────────
+      - name: "☕ Setup Java 21 (Temurin)"
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: "21"
 
-      - name: Setup Node 22
+      - name: "📦 Setup Node 22"
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
 
-      - name: Install tools
+      - name: "🛠️ Install system dependencies"
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y curl unzip zip python3-pip
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pillow
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            curl wget unzip zip imagemagick python3-pip \
+            fonts-dejavu-core libjpeg-dev libpng-dev
+          python3 -m pip install --quiet --upgrade pip
+          python3 -m pip install --quiet Pillow cairosvg requests
 
-      - name: Create Capacitor Android app
+      # ── Scaffold ───────────────────────────────────────────────────────────
+      - name: "🏗️ Scaffold Capacitor project"
         shell: bash
         run: |
-          set -e
-          mkdir app
-          cd app
+          set -eo pipefail
+          mkdir -p app && cd app
+
           npm init -y
-          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
-          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest @capacitor/browser@latest
+
+          echo "📦 Installing Capacitor + plugins..."
+          npm install --save \
+            @capacitor/core@latest \
+            @capacitor/cli@latest \
+            @capacitor/android@latest \
+            @capacitor/status-bar@latest \
+            @capacitor/splash-screen@latest \
+            @capacitor/app@latest \
+            @capacitor/keyboard@latest \
+            @capacitor/network@latest \
+            @capacitor/browser@latest \
+            @capacitor/filesystem@latest \
+            @capacitor/preferences@latest \
+            @capacitor/push-notifications@latest \
+            @capacitor/camera@latest \
+            @capacitor/geolocation@latest \
+            @capacitor/haptics@latest \
+            @capacitor/share@latest
+
+          # ── Splash screen HTML (inline fallback, real app loads website_url) ──
           mkdir -p www
-          cat > www/index.html <<EOF
+
+          # Build animated splash page
+          SPINNER_HTML=""
+          if [[ "$SPLASH_ANIMATION" == "spinner" ]]; then
+            SPINNER_HTML='<div class="spinner"></div>'
+          elif [[ "$SPLASH_ANIMATION" == "pulse" ]]; then
+            SPINNER_HTML='<div class="pulse"></div>'
+          fi
+
+          TEXT_HTML=""
+          if [[ -n "$SPLASH_TEXT" ]]; then
+            TEXT_HTML="<p class=\"loading-text\">${SPLASH_TEXT}</p>"
+          fi
+
+          cat > www/index.html <<HTML
           <!DOCTYPE html>
-          <html>
+          <html lang="en">
           <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-            <meta name="theme-color" content="${APP_COLOR}">
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+            <meta name="theme-color" content="${APP_COLOR}" />
+            <meta name="mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
             <title>${APP_NAME}</title>
             <style>
-              html,body{margin:0;width:100%;height:100%;background:${SPLASH_BACKGROUND};color:white;font-family:Arial,sans-serif;overflow:hidden}
-              .wrap{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px}
-              .spinner{width:52px;height:52px;border:5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
-              @keyframes spin{to{transform:rotate(360deg)}}
+              *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+              html, body {
+                width: 100%; height: 100%;
+                background: ${SPLASH_BACKGROUND};
+                color: #fff;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                display: flex; align-items: center; justify-content: center;
+                overflow: hidden;
+                -webkit-user-select: none; user-select: none;
+              }
+              .wrap { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+              .spinner {
+                width: 48px; height: 48px;
+                border: 4px solid rgba(255,255,255,0.2);
+                border-top-color: rgba(255,255,255,0.9);
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+              }
+              .pulse {
+                width: 56px; height: 56px;
+                background: rgba(255,255,255,0.85);
+                border-radius: 50%;
+                animation: pulse 1.2s ease-in-out infinite;
+              }
+              .loading-text {
+                font-size: 15px; font-weight: 500;
+                opacity: 0.75; letter-spacing: 0.03em;
+              }
+              @keyframes spin { to { transform: rotate(360deg); } }
+              @keyframes pulse {
+                0%, 100% { transform: scale(0.7); opacity: 0.5; }
+                50%       { transform: scale(1.1); opacity: 1; }
+              }
             </style>
           </head>
-          <body><div class="wrap"><div class="spinner"></div><strong>${SPLASH_TEXT}</strong></div></body>
+          <body>
+            <div class="wrap">
+              ${SPINNER_HTML}
+              ${TEXT_HTML}
+            </div>
+          </body>
           </html>
-          EOF
+          HTML
+
+          # Offline error page
+          cat > www/offline.html <<HTML
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+            <title>No Connection</title>
+            <style>
+              *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+              html, body {
+                width: 100%; height: 100%;
+                background: ${SPLASH_BACKGROUND};
+                color: #fff;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                display: flex; align-items: center; justify-content: center;
+                text-align: center; padding: 32px;
+              }
+              .wrap { max-width: 320px; }
+              .icon { font-size: 64px; margin-bottom: 20px; }
+              h1 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+              p { font-size: 15px; opacity: 0.65; line-height: 1.6; margin-bottom: 28px; }
+              button {
+                background: rgba(255,255,255,0.15);
+                color: #fff; border: 1.5px solid rgba(255,255,255,0.35);
+                padding: 12px 32px; border-radius: 100px;
+                font-size: 15px; font-weight: 600; cursor: pointer;
+                transition: background 0.2s;
+              }
+              button:active { background: rgba(255,255,255,0.3); }
+            </style>
+          </head>
+          <body>
+            <div class="wrap">
+              <div class="icon">📡</div>
+              <h1>No Connection</h1>
+              <p>Please check your internet connection and try again.</p>
+              <button onclick="window.location.reload()">Retry</button>
+            </div>
+          </body>
+          </html>
+          HTML
+
+          echo "⚙️ Initialising Capacitor..."
           npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
-          cat > capacitor.config.json <<EOF
+
+          # ── capacitor.config.json ──────────────────────────────────────────
+          cat > capacitor.config.json <<JSON
           {
             "appId": "${APP_ID}",
             "appName": "${APP_NAME}",
             "webDir": "www",
+            "bundledWebRuntime": false,
             "server": {
               "url": "${WEBSITE_URL}",
-              "cleartext": ${ALLOW_HTTP}
+              "cleartext": ${ALLOW_HTTP},
+              "androidScheme": "https",
+              "allowNavigation": ["*"]
+            },
+            "android": {
+              "allowMixedContent": ${MIXED_CONTENT},
+              "captureInput": true,
+              "webContentsDebuggingEnabled": false,
+              "loggingBehavior": "none"
             },
             "plugins": {
               "SplashScreen": {
-                "launchShowDuration": 1500,
+                "launchShowDuration": ${SPLASH_DURATION},
                 "launchAutoHide": true,
+                "launchFadeOutDuration": 400,
                 "backgroundColor": "${SPLASH_BACKGROUND}",
-                "showSpinner": true,
-                "spinnerColor": "#ffffff"
+                "showSpinner": false,
+                "splashFullScreen": true,
+                "splashImmersive": true,
+                "useDialog": false
               },
               "StatusBar": {
                 "style": "DARK",
@@ -219,36 +561,126 @@ jobs:
               },
               "Keyboard": {
                 "resize": "body",
-                "style": "dark"
+                "style": "dark",
+                "resizeOnFullScreen": true
+              },
+              "PushNotifications": {
+                "presentationOptions": ["badge", "sound", "alert"]
               }
             }
           }
-          EOF
+          JSON
+
+          echo "📱 Adding Android platform..."
           npx cap add android
           npx cap sync android
 
-      - name: Customize Android
+      # ── Customize Android ──────────────────────────────────────────────────
+      - name: "🔧 Customize Android project"
         shell: bash
         run: |
-          set -e
+          set -eo pipefail
           cd app/android
-          MANIFEST="app/src/main/AndroidManifest.xml"
-          MAIN="app/src/main/java/$(echo "${APP_ID}" | tr '.' '/')/MainActivity.java"
 
-          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
-            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST"
+          # ── AndroidManifest ────────────────────────────────────────────────
+          MANIFEST="app/src/main/AndroidManifest.xml"
+
+          # Required permissions
+          PERMISSIONS=(
+            "android.permission.INTERNET"
+            "android.permission.ACCESS_NETWORK_STATE"
+            "android.permission.CHANGE_NETWORK_STATE"
+          )
+          if [[ "$GEOLOCATION" == "true" ]]; then
+            PERMISSIONS+=("android.permission.ACCESS_FINE_LOCATION" "android.permission.ACCESS_COARSE_LOCATION")
           fi
-          if ! grep -q "android.permission.ACCESS_NETWORK_STATE" "$MANIFEST"; then
-            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' "$MANIFEST"
+          if [[ "$CAMERA" == "true" ]]; then
+            PERMISSIONS+=("android.permission.CAMERA")
           fi
-          if [[ "$ALLOW_HTTP" == "true" ]] && ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
-            sed -i 's/<application /<application android:usesCleartextTraffic="true" /' "$MANIFEST"
+          if [[ "$MICROPHONE" == "true" ]]; then
+            PERMISSIONS+=("android.permission.RECORD_AUDIO")
           fi
+          if [[ "$PUSH_NOTIFICATIONS" == "true" ]]; then
+            PERMISSIONS+=("android.permission.POST_NOTIFICATIONS" "android.permission.VIBRATE" "android.permission.RECEIVE_BOOT_COMPLETED")
+          fi
+          if [[ "$ALLOW_FILE_ACCESS" == "true" ]]; then
+            PERMISSIONS+=("android.permission.READ_EXTERNAL_STORAGE" "android.permission.WRITE_EXTERNAL_STORAGE")
+          fi
+
+          for PERM in "${PERMISSIONS[@]}"; do
+            if ! grep -q "$PERM" "$MANIFEST"; then
+              sed -i "/<manifest/a\    <uses-permission android:name=\"$PERM\" />" "$MANIFEST"
+            fi
+          done
+
+          # Cleartext traffic
+          if [[ "$ALLOW_HTTP" == "true" ]]; then
+            if ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
+              sed -i 's|<application |<application android:usesCleartextTraffic="true" |' "$MANIFEST"
+            fi
+          fi
+
+          # Fullscreen / immersive
+          if [[ "$FULLSCREEN" == "true" ]]; then
+            if ! grep -q "android:theme" "$MANIFEST"; then
+              sed -i 's|android:name=".MainActivity"|android:name=".MainActivity" android:theme="@style/AppTheme.NoActionBar"|' "$MANIFEST"
+            fi
+          fi
+
+          # Orientation
           if [[ "$ORIENTATION" != "unspecified" ]]; then
             sed -i "s|android:name=\".MainActivity\"|android:name=\".MainActivity\" android:screenOrientation=\"${ORIENTATION}\"|g" "$MANIFEST" || true
           fi
 
-          cat > app/src/main/res/values/strings.xml <<EOF
+          # Keep screen on
+          if [[ "$KEEP_SCREEN_ON" == "true" ]]; then
+            sed -i 's|android:name=".MainActivity"|android:name=".MainActivity" android:keepScreenOn="true"|' "$MANIFEST" || true
+          fi
+
+          # Hardware acceleration
+          if [[ "$HARDWARE_ACCEL" == "true" ]]; then
+            if ! grep -q "hardwareAccelerated" "$MANIFEST"; then
+              sed -i 's|<application |<application android:hardwareAccelerated="true" |' "$MANIFEST"
+            fi
+          fi
+
+          # Deep links
+          if [[ -n "$DEEP_LINK_SCHEME" ]]; then
+            DEEP_INTENT="        <intent-filter>\n            <action android:name=\"android.intent.action.VIEW\" />\n            <category android:name=\"android.intent.category.DEFAULT\" />\n            <category android:name=\"android.intent.category.BROWSABLE\" />\n            <data android:scheme=\"${DEEP_LINK_SCHEME}\" />\n        </intent-filter>"
+            sed -i "/<\/activity>/i\\${DEEP_INTENT}" "$MANIFEST" || true
+          fi
+
+          # Network security config
+          if ! grep -q "networkSecurityConfig" "$MANIFEST"; then
+            sed -i 's|<application |<application android:networkSecurityConfig="@xml/network_security_config" |' "$MANIFEST"
+          fi
+          mkdir -p app/src/main/res/xml
+          if [[ "$ALLOW_HTTP" == "true" ]]; then
+            cat > app/src/main/res/xml/network_security_config.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+            <base-config cleartextTrafficPermitted="true">
+              <trust-anchors>
+                <certificates src="system" />
+              </trust-anchors>
+            </base-config>
+          </network-security-config>
+          XML
+          else
+            cat > app/src/main/res/xml/network_security_config.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+            <base-config cleartextTrafficPermitted="false">
+              <trust-anchors>
+                <certificates src="system" />
+              </trust-anchors>
+            </base-config>
+          </network-security-config>
+          XML
+          fi
+
+          # ── strings.xml ────────────────────────────────────────────────────
+          cat > app/src/main/res/values/strings.xml <<XML
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">${APP_NAME}</string>
@@ -256,33 +688,85 @@ jobs:
               <string name="package_name">${APP_ID}</string>
               <string name="custom_url_scheme">${APP_ID}</string>
           </resources>
-          EOF
+          XML
 
-          cat > app/src/main/res/values/colors.xml <<EOF
+          # ── colors.xml ─────────────────────────────────────────────────────
+          cat > app/src/main/res/values/colors.xml <<XML
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <color name="colorPrimary">${APP_COLOR}</color>
               <color name="colorPrimaryDark">${STATUS_BAR_COLOR}</color>
+              <color name="colorAccent">${APP_COLOR}</color>
+              <color name="colorSplash">${SPLASH_BACKGROUND}</color>
               <color name="navigationBarColor">${NAVIGATION_BAR_COLOR}</color>
           </resources>
-          EOF
+          XML
 
-          if [[ -f "$MAIN" ]]; then
-            cat > "$MAIN" <<EOF
+          # ── styles.xml ─────────────────────────────────────────────────────
+          mkdir -p app/src/main/res/values
+          cat > app/src/main/res/values/styles.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+                  <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+                  <item name="android:navigationBarColor">@color/navigationBarColor</item>
+                  <item name="android:windowBackground">@color/colorSplash</item>
+                  <item name="colorPrimary">@color/colorPrimary</item>
+                  <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+              </style>
+              <style name="AppTheme.NoActionBar" parent="AppTheme">
+                  <item name="windowNoTitle">true</item>
+                  <item name="windowActionBar">false</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowContentOverlay">@null</item>
+              </style>
+          </resources>
+          XML
+
+          # ── MainActivity.java ──────────────────────────────────────────────
+          MAIN_DIR="app/src/main/java/$(echo "${APP_ID}" | tr '.' '/')"
+          MAIN="${MAIN_DIR}/MainActivity.java"
+
+          mkdir -p "$MAIN_DIR"
+
+          # Map cache mode string to WebSettings constant
+          CACHE_CONST="LOAD_DEFAULT"
+          case "$CACHE_MODE" in
+            no_cache)          CACHE_CONST="LOAD_NO_CACHE"           ;;
+            cache_only)        CACHE_CONST="LOAD_CACHE_ONLY"         ;;
+            cache_else_network) CACHE_CONST="LOAD_CACHE_ELSE_NETWORK" ;;
+          esac
+
+          cat > "$MAIN" <<JAVA
           package ${APP_ID};
 
+          import android.annotation.SuppressLint;
+          import android.content.Intent;
+          import android.net.Uri;
           import android.os.Bundle;
           import android.view.View;
+          import android.view.WindowManager;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceError;
+          import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
+          import android.webkit.WebViewClient;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
+
+              private static final String TARGET_URL = "${WEBSITE_URL}";
+
               @Override
+              @SuppressLint("SetJavaScriptEnabled")
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  if ("${FULLSCREEN}".equals("true")) {
+                  // ── Window flags ──────────────────────────────────────────
+                  if (${FULLSCREEN}) {
                       getWindow().getDecorView().setSystemUiVisibility(
                           View.SYSTEM_UI_FLAG_FULLSCREEN
                           | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
@@ -292,208 +776,921 @@ jobs:
                           | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                       );
                   }
+                  if (${KEEP_SCREEN_ON}) {
+                      getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                  }
+                  if (${HARDWARE_ACCEL}) {
+                      getWindow().setFlags(
+                          WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                          WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+                      );
+                  }
 
+                  // ── WebView configuration ─────────────────────────────────
                   try {
                       WebView webView = this.bridge.getWebView();
                       WebSettings settings = webView.getSettings();
+
+                      // Essential
                       settings.setJavaScriptEnabled(true);
                       settings.setDomStorageEnabled(true);
                       settings.setDatabaseEnabled(true);
+
+                      // Media
                       settings.setMediaPlaybackRequiresUserGesture(false);
+
+                      // Display
                       settings.setLoadWithOverviewMode(true);
                       settings.setUseWideViewPort(true);
                       settings.setBuiltInZoomControls(${ENABLE_ZOOM});
                       settings.setDisplayZoomControls(false);
                       settings.setSupportZoom(${ENABLE_ZOOM});
-                      settings.setUserAgentString(settings.getUserAgentString() + " ${USER_AGENT_SUFFIX}");
-                  } catch (Exception ignored) {}
+
+                      // Cache
+                      settings.setCacheMode(WebSettings.${CACHE_CONST});
+
+                      // File access
+                      settings.setAllowFileAccess(${ALLOW_FILE_ACCESS});
+                      settings.setAllowContentAccess(${ALLOW_FILE_ACCESS});
+
+                      // Mixed content
+                      if (${MIXED_CONTENT}) {
+                          settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                      } else {
+                          settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+                      }
+
+                      // User-Agent
+                      String ua = settings.getUserAgentString();
+                      String suffix = "${USER_AGENT_SUFFIX}".trim();
+                      if (!suffix.isEmpty()) ua = ua + " " + suffix;
+                      settings.setUserAgentString(ua);
+
+                      // ── WebViewClient — intercept errors / back nav ────────
+                      webView.setWebViewClient(new WebViewClient() {
+                          @Override
+                          public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                              String url = req.getUrl().toString();
+                              // Open external URLs in browser, keep internal in WebView
+                              if (url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("intent:")) {
+                                  try {
+                                      Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                                      startActivity(intent);
+                                  } catch (Exception ignored) {}
+                                  return true;
+                              }
+                              return false;
+                          }
+
+                          @Override
+                          public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
+                              super.onReceivedError(view, req, err);
+                              if (${SHOW_OFFLINE_PAGE} && req.isForMainFrame()) {
+                                  view.loadUrl("file:///android_asset/public/offline.html");
+                              }
+                          }
+                      });
+
+                      // ── WebChromeClient — permissions ─────────────────────
+                      webView.setWebChromeClient(new WebChromeClient() {
+                          @Override
+                          public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                              if (${GEOLOCATION}) callback.invoke(origin, true, false);
+                          }
+
+                          @Override
+                          public void onPermissionRequest(PermissionRequest request) {
+                              if (${CAMERA} || ${MICROPHONE}) {
+                                  request.grant(request.getResources());
+                              } else {
+                                  request.deny();
+                              }
+                          }
+                      });
+
+                  } catch (Exception e) {
+                      e.printStackTrace();
+                  }
+              }
+
+              // ── Hardware back button — web history navigation ───────────────
+              @Override
+              public void onBackPressed() {
+                  if (${ENABLE_BACK_NAV}) {
+                      try {
+                          WebView webView = this.bridge.getWebView();
+                          if (webView.canGoBack()) {
+                              webView.goBack();
+                              return;
+                          }
+                      } catch (Exception ignored) {}
+                  }
+                  super.onBackPressed();
               }
           }
-          EOF
+          JAVA
+
+          echo "✅ Android project customised"
+
+      # ── Icons + Splash ─────────────────────────────────────────────────────
+      - name: "🎨 Generate adaptive icons & splash screens"
+        shell: bash
+        run: |
+          set -eo pipefail
+          cd app/android
+
+          # Create all mipmap directories (standard + foreground layer)
+          for d in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+            mkdir -p "app/src/main/res/$d"
+          done
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/drawable-night
+          mkdir -p app/src/main/res/drawable-v21
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+
+          # Download icon if URL provided
+          if [[ -n "$ICON_URL" ]]; then
+            echo "⬇️ Downloading icon from $ICON_URL"
+            curl -fsSL -o /tmp/icon_input "$ICON_URL" || {
+              echo "⚠️ Icon download failed, using letter icon"
+              rm -f /tmp/icon_input
+            }
           fi
 
-      - name: Generate Android icon and splash
-        shell: bash
-        run: |
-          set -e
-          cd app/android
-          mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi app/src/main/res/drawable
-          if [[ -n "$ICON_URL" ]]; then curl -L "$ICON_URL" -o /tmp/icon_input || true; fi
-          python3 - <<'PY'
-          from PIL import Image, ImageDraw, ImageFont
-          import os, pathlib
-          app_color=os.environ.get("APP_COLOR","#111827")
-          splash_bg=os.environ.get("SPLASH_BACKGROUND",app_color)
-          app_name=os.environ.get("APP_NAME","App")
-          icon_url=os.environ.get("ICON_URL","")
-          letter=(app_name.strip()[:1] or "A").upper()
-          def make_icon(size):
-              p=pathlib.Path("/tmp/icon_input")
-              if icon_url and p.exists() and p.stat().st_size>0:
-                  try:
-                      im=Image.open(p).convert("RGBA")
-                      im.thumbnail((size,size))
-                      canvas=Image.new("RGBA",(size,size),app_color)
-                      canvas.alpha_composite(im,((size-im.width)//2,(size-im.height)//2))
-                      return canvas
-                  except Exception:
-                      pass
-              im=Image.new("RGBA",(size,size),app_color)
-              d=ImageDraw.Draw(im)
-              try: font=ImageFont.truetype("DejaVuSans-Bold.ttf",int(size*.56))
-              except Exception: font=None
-              bbox=d.textbbox((0,0),letter,font=font)
-              w,h=bbox[2]-bbox[0],bbox[3]-bbox[1]
-              d.text(((size-w)/2,(size-h)/2-size*.04),letter,fill="white",font=font)
-              return im
-          sizes={"mipmap-mdpi":48,"mipmap-hdpi":72,"mipmap-xhdpi":96,"mipmap-xxhdpi":144,"mipmap-xxxhdpi":192}
-          for folder,size in sizes.items():
-              img=make_icon(size)
-              img.save(f"app/src/main/res/{folder}/ic_launcher.png")
-              img.save(f"app/src/main/res/{folder}/ic_launcher_round.png")
-          splash=Image.new("RGBA",(1080,1920),splash_bg)
-          icon=make_icon(360)
-          splash.alpha_composite(icon,((1080-360)//2,(1920-360)//2))
+          python3 <<'PY'
+          import os, sys, pathlib, math
+          from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+          APP_COLOR    = os.environ.get("APP_COLOR",    "#1a1a2e")
+          ICON_BG      = os.environ.get("ICON_BG_COLOR", APP_COLOR)
+          SPLASH_BG    = os.environ.get("SPLASH_BACKGROUND", APP_COLOR)
+          APP_NAME     = os.environ.get("APP_NAME",     "App")
+          ICON_URL     = os.environ.get("ICON_URL",     "")
+          ICON_SHAPE   = os.environ.get("ICON_SHAPE",   "rounded")
+          DARK_MODE    = os.environ.get("DARK_MODE_ICON","true") == "true"
+
+          LETTER = (APP_NAME.strip()[:1] or "A").upper()
+
+          # ── Icon factory ────────────────────────────────────────────────────
+          def load_custom_icon(size):
+              """Try loading user-supplied icon"""
+              p = pathlib.Path("/tmp/icon_input")
+              if not (ICON_URL and p.exists() and p.stat().st_size > 100):
+                  return None
+              try:
+                  # Handle SVG
+                  if p.read_bytes()[:5] == b'<?xml' or b'<svg' in p.read_bytes()[:64]:
+                      import cairosvg
+                      svg_data = cairosvg.svg2png(url=str(p), output_width=size, output_height=size)
+                      return Image.open(__import__('io').BytesIO(svg_data)).convert("RGBA")
+                  img = Image.open(p).convert("RGBA")
+                  img = img.resize((size, size), Image.LANCZOS)
+                  return img
+              except Exception as e:
+                  print(f"⚠️  Icon load error: {e}")
+                  return None
+
+          def make_letter_icon(size, bg=None):
+              """Generate a high-quality letter icon"""
+              bg = bg or ICON_BG
+              img = Image.new("RGBA", (size, size), bg)
+              d = ImageDraw.Draw(img)
+
+              # Gradient-like effect: slightly lighter at top
+              try:
+                  r, g, b = int(bg[1:3],16), int(bg[3:5],16), int(bg[5:7],16)
+                  for y in range(size):
+                      alpha = int(40 * (1 - y / size))
+                      d.line([(0,y),(size,y)], fill=(min(r+60,255), min(g+60,255), min(b+60,255), alpha))
+              except Exception:
+                  pass
+
+              font_size = int(size * 0.52)
+              font = None
+              for font_path in [
+                  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                  "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                  "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+              ]:
+                  if pathlib.Path(font_path).exists():
+                      font = ImageFont.truetype(font_path, font_size)
+                      break
+              if font is None:
+                  font = ImageFont.load_default()
+
+              bbox = d.textbbox((0, 0), LETTER, font=font)
+              tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+              x = (size - tw) / 2 - bbox[0]
+              y = (size - th) / 2 - bbox[1] - size * 0.02
+
+              # Shadow
+              d.text((x+2, y+3), LETTER, fill=(0,0,0,80), font=font)
+              # Main letter
+              d.text((x, y), LETTER, fill=(255,255,255,255), font=font)
+              return img
+
+          def apply_shape_mask(img, shape, size):
+              """Apply rounded / circle mask"""
+              mask = Image.new("L", (size, size), 0)
+              d = ImageDraw.Draw(mask)
+              if shape == "circle":
+                  d.ellipse([0, 0, size-1, size-1], fill=255)
+              elif shape == "rounded":
+                  radius = int(size * 0.22)
+                  d.rounded_rectangle([0, 0, size-1, size-1], radius=radius, fill=255)
+              else:
+                  d.rectangle([0, 0, size-1, size-1], fill=255)
+              result = Image.new("RGBA", (size, size), (0,0,0,0))
+              result.paste(img, mask=mask)
+              return result
+
+          def make_icon(size, bg=None, for_adaptive=False):
+              """Make final icon at requested size"""
+              raw = load_custom_icon(size)
+              if raw is None:
+                  raw = make_letter_icon(size, bg)
+              if for_adaptive:
+                  # Adaptive icons: icon sits in centre 66% of 108dp canvas
+                  canvas_size = int(size * 108 / 72)
+                  canvas = Image.new("RGBA", (canvas_size, canvas_size), bg or ICON_BG)
+                  # paste icon centred
+                  offset = (canvas_size - size) // 2
+                  canvas.alpha_composite(raw, (offset, offset))
+                  return canvas
+              if not ICON_URL:
+                  raw = apply_shape_mask(raw, ICON_SHAPE, size)
+              return raw
+
+          # ── Standard launcher icons ─────────────────────────────────────────
+          SIZES = {
+              "mipmap-mdpi":    48,
+              "mipmap-hdpi":    72,
+              "mipmap-xhdpi":   96,
+              "mipmap-xxhdpi":  144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in SIZES.items():
+              icon = make_icon(size)
+              base = f"app/src/main/res/{folder}"
+              icon.save(f"{base}/ic_launcher.png")
+              icon.save(f"{base}/ic_launcher_round.png")
+              print(f"  ✅ {folder}/ic_launcher.png ({size}px)")
+
+          # ── Adaptive icon layers (API 26+) ──────────────────────────────────
+          # Foreground layer (108×108dp equivalent at each density)
+          ADAPTIVE_SIZES = {
+              "mipmap-mdpi":    108,
+              "mipmap-hdpi":    162,
+              "mipmap-xhdpi":   216,
+              "mipmap-xxhdpi":  324,
+              "mipmap-xxxhdpi": 432,
+          }
+
+          # Background colour drawable
+          with open("app/src/main/res/drawable/ic_launcher_background.xml", "w") as f:
+              f.write(f'<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android">\n    <solid android:color="{ICON_BG}"/>\n</shape>')
+
+          for folder, size in ADAPTIVE_SIZES.items():
+              fg = make_icon(int(size * 72 / 108), for_adaptive=True)
+              fg = fg.resize((size, size), Image.LANCZOS)
+              fg.save(f"app/src/main/res/{folder}/ic_launcher_foreground.png")
+
+          # Adaptive icon XML
+          with open("app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml", "w") as f:
+              f.write('<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@drawable/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>')
+          with open("app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml", "w") as f:
+              f.write('<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@drawable/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>')
+
+          # Dark mode adaptive icon
+          if DARK_MODE:
+              with open("app/src/main/res/drawable-night/ic_launcher_background.xml", "w") as f:
+                  f.write(f'<?xml version="1.0" encoding="utf-8"?>\n<shape xmlns:android="http://schemas.android.com/apk/res/android">\n    <solid android:color="#000000"/>\n</shape>')
+
+          # ── Splash drawable (vector-style) ──────────────────────────────────
+          # Large splash: 1080×2340 (tall modern phones)
+          SPLASH_W, SPLASH_H = 1080, 2340
+          splash = Image.new("RGBA", (SPLASH_W, SPLASH_H), SPLASH_BG)
+
+          # Place icon centred
+          ICON_SZ = 320
+          icon_img = make_icon(ICON_SZ)
+          ox = (SPLASH_W - ICON_SZ) // 2
+          oy = (SPLASH_H - ICON_SZ) // 2 - 80
+          splash.alpha_composite(icon_img, (ox, oy))
           splash.save("app/src/main/res/drawable/splash.png")
+
+          # Also save smaller splash for older Android
+          small = splash.resize((480, 800), Image.LANCZOS)
+          small.save("app/src/main/res/drawable/splash_small.png")
+
+          print("✅ All icons and splash screens generated")
           PY
 
-      - name: Set Android version
+          echo "✅ Icon & splash generation complete"
+
+      # ── Version & Build Config ─────────────────────────────────────────────
+      - name: "📝 Set version & build config"
         shell: bash
         run: |
-          set -e
+          set -eo pipefail
           cd app/android
-          sed -i "s/versionCode .*/versionCode ${VERSION_CODE}/g" app/build.gradle || true
-          sed -i "s/versionName .*/versionName \"${VERSION_NAME}\"/g" app/build.gradle || true
 
-      - name: Build APK
+          GRADLE="app/build.gradle"
+
+          # Safe substitution
+          sed -i "s/versionCode [0-9]*/versionCode ${VERSION_CODE}/" "$GRADLE" || true
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION_NAME}\"/" "$GRADLE" || true
+
+          # Enable minify only for release AAB (reduces size)
+          if grep -q "minifyEnabled false" "$GRADLE"; then
+            # Keep debug as-is, update release block
+            awk '/release \{/{found=1} found && /minifyEnabled false/{sub(/minifyEnabled false/, "minifyEnabled false"); found=0} {print}' "$GRADLE" > /tmp/gradle_tmp && mv /tmp/gradle_tmp "$GRADLE" || true
+          fi
+
+          # Ensure compileSdkVersion is modern
+          sed -i "s/compileSdkVersion [0-9]*/compileSdkVersion 34/" "$GRADLE" || true
+          sed -i "s/targetSdkVersion [0-9]*/targetSdkVersion 34/" "$GRADLE" || true
+          sed -i "s/minSdkVersion [0-9]*/minSdkVersion 24/" "$GRADLE" || true
+
+          # Java / Kotlin compatibility
+          if ! grep -q "compileOptions" "$GRADLE"; then
+            cat >> "$GRADLE" <<GRADLE_EXTRA
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          GRADLE_EXTRA
+          fi
+
+          echo "  versionCode  = ${VERSION_CODE}"
+          echo "  versionName  = ${VERSION_NAME}"
+          echo "✅ Build config updated"
+
+      # ── Signing (optional) ─────────────────────────────────────────────────
+      - name: "🔏 Configure Android signing (if enabled)"
+        if: env.SIGN_ANDROID == 'true'
+        shell: bash
+        run: |
+          set -eo pipefail
+          if [[ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]]; then
+            echo "⚠️  SIGN_ANDROID=true but ANDROID_KEYSTORE_BASE64 secret not set. Skipping signing."
+            exit 0
+          fi
+          cd app/android
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+
+          cat >> app/build.gradle <<SIGN
+
+              signingConfigs {
+                  release {
+                      storeFile file('release.keystore')
+                      storePassword '${{ secrets.ANDROID_KEYSTORE_PASSWORD }}'
+                      keyAlias '${{ secrets.ANDROID_KEY_ALIAS }}'
+                      keyPassword '${{ secrets.ANDROID_KEY_PASSWORD }}'
+                  }
+              }
+          SIGN
+
+          sed -i "s/buildType release {/buildType release {\n            signingConfig signingConfigs.release/" app/build.gradle || true
+          echo "✅ Signing configured"
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: "🔨 Build APK (debug)"
         if: github.event.inputs.android_output == 'apk' || github.event.inputs.android_output == 'both'
         shell: bash
         run: |
+          set -eo pipefail
           cd app/android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -60
+          echo "✅ APK built"
 
-      - name: Build unsigned AAB
+      - name: "🔨 Build AAB (release)"
         if: github.event.inputs.android_output == 'aab' || github.event.inputs.android_output == 'both'
         shell: bash
         run: |
+          set -eo pipefail
           cd app/android
           chmod +x gradlew
-          ./gradlew bundleRelease --stacktrace
+          ./gradlew bundleRelease --no-daemon --stacktrace 2>&1 | tail -60
+          echo "✅ AAB built"
 
-      - name: Upload Android APK
+      # ── Collect artifacts ──────────────────────────────────────────────────
+      - name: "📋 Collect build info"
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-debug-apk
-          path: app/android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: ignore
-
-      - name: Upload Android AAB
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-release-aab-unsigned
-          path: app/android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: ignore
-
-      - name: Upload Android project source
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-project-source
-          path: app
-          if-no-files-found: ignore
-
-  ios:
-    name: Build iOS Project Zip
-    needs: validate
-    if: github.event.inputs.build_target == 'ios' || github.event.inputs.build_target == 'both'
-    runs-on: macos-latest
-    steps:
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Create Capacitor iOS project
         shell: bash
         run: |
-          set -e
-          mkdir app
-          cd app
+          echo "### 🤖 Android Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| App Name | ${APP_NAME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package ID | ${APP_ID} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Website URL | ${WEBSITE_URL} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${VERSION_NAME} (${VERSION_CODE}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target SDK | 34 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Min SDK | 24 (Android 7.0+) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Signed | ${SIGN_ANDROID} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: "⬆️ Upload APK"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ github.event.inputs.app_id }}-debug-apk-v${{ github.event.inputs.version_name }}"
+          path: app/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: "⬆️ Upload AAB"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ github.event.inputs.app_id }}-release-aab-v${{ github.event.inputs.version_name }}"
+          path: app/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: "⬆️ Upload full Android project source"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "android-project-source-v${{ github.event.inputs.version_name }}"
+          path: app/
+          if-no-files-found: ignore
+          retention-days: 14
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# JOB 3 — iOS
+# ═══════════════════════════════════════════════════════════════════════════════
+  ios:
+    name: "🍎 Build iOS Project"
+    needs: validate
+    if: needs.validate.outputs.build_ios == 'true'
+    runs-on: macos-latest
+
+    steps:
+      - name: "📦 Setup Node 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: "🐍 Setup Python + Pillow"
+        run: |
+          python3 -m pip install --quiet --upgrade pip
+          python3 -m pip install --quiet Pillow cairosvg requests
+
+      - name: "🏗️ Scaffold Capacitor iOS project"
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p app && cd app
           npm init -y
-          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/ios@latest
-          npm install @capacitor/status-bar@latest @capacitor/splash-screen@latest @capacitor/app@latest @capacitor/keyboard@latest @capacitor/network@latest @capacitor/browser@latest
-          mkdir -p www assets
-          cat > www/index.html <<EOF
+
+          echo "📦 Installing Capacitor + plugins..."
+          npm install --save \
+            @capacitor/core@latest \
+            @capacitor/cli@latest \
+            @capacitor/ios@latest \
+            @capacitor/status-bar@latest \
+            @capacitor/splash-screen@latest \
+            @capacitor/app@latest \
+            @capacitor/keyboard@latest \
+            @capacitor/network@latest \
+            @capacitor/browser@latest \
+            @capacitor/filesystem@latest \
+            @capacitor/preferences@latest \
+            @capacitor/push-notifications@latest \
+            @capacitor/camera@latest \
+            @capacitor/geolocation@latest \
+            @capacitor/haptics@latest \
+            @capacitor/share@latest
+
+          mkdir -p www
+
+          # Splash HTML
+          SPLASH_CONTENT=""
+          if [[ "$SPLASH_ANIMATION" == "spinner" ]]; then SPLASH_CONTENT='<div class="spinner"></div>'; fi
+          if [[ "$SPLASH_ANIMATION" == "pulse"   ]]; then SPLASH_CONTENT='<div class="pulse"></div>'; fi
+          TEXT_CONTENT=""
+          if [[ -n "$SPLASH_TEXT" ]]; then TEXT_CONTENT="<p class=\"txt\">${SPLASH_TEXT}</p>"; fi
+
+          cat > www/index.html <<HTML
           <!DOCTYPE html>
-          <html>
+          <html lang="en">
           <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta name="theme-color" content="${APP_COLOR}">
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
             <title>${APP_NAME}</title>
             <style>
-              html,body{margin:0;width:100%;height:100%;background:${SPLASH_BACKGROUND};color:white;font-family:Arial;display:flex;align-items:center;justify-content:center}
+              *{margin:0;padding:0;box-sizing:border-box}
+              html,body{
+                width:100%;height:100%;
+                background:${SPLASH_BACKGROUND};
+                color:#fff;
+                font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+                display:flex;align-items:center;justify-content:center;
+                overflow:hidden;-webkit-user-select:none;user-select:none;
+              }
+              .w{display:flex;flex-direction:column;align-items:center;gap:22px}
+              .spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:rgba(255,255,255,.9);border-radius:50%;animation:spin .8s linear infinite}
+              .pulse{width:52px;height:52px;background:rgba(255,255,255,.85);border-radius:50%;animation:pulse 1.2s ease-in-out infinite}
+              .txt{font-size:14px;opacity:.65;letter-spacing:.04em;font-weight:500}
+              @keyframes spin{to{transform:rotate(360deg)}}
+              @keyframes pulse{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1.1);opacity:1}}
             </style>
           </head>
-          <body><strong>${SPLASH_TEXT}</strong></body>
+          <body><div class="w">${SPLASH_CONTENT}${TEXT_CONTENT}</div></body>
           </html>
-          EOF
+          HTML
+
+          cat > www/offline.html <<HTML
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+            <title>No Connection</title>
+            <style>
+              *{margin:0;padding:0;box-sizing:border-box}
+              html,body{width:100%;height:100%;background:${SPLASH_BACKGROUND};color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;padding:32px}
+              .w{max-width:300px}
+              .icon{font-size:60px;margin-bottom:18px}
+              h1{font-size:20px;font-weight:700;margin-bottom:8px}
+              p{font-size:14px;opacity:.6;line-height:1.6;margin-bottom:24px}
+              button{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.3);padding:11px 28px;border-radius:100px;font-size:14px;font-weight:600;-webkit-appearance:none}
+            </style>
+          </head>
+          <body>
+            <div class="w">
+              <div class="icon">📡</div>
+              <h1>No Connection</h1>
+              <p>Please check your internet connection and try again.</p>
+              <button onclick="window.location.reload()">Retry</button>
+            </div>
+          </body>
+          </html>
+          HTML
+
+          echo "⚙️ Initialising Capacitor..."
           npx cap init "${APP_NAME}" "${APP_ID}" --web-dir www
-          cat > capacitor.config.json <<EOF
+
+          # ── capacitor.config.json ─────────────────────────────────────────
+          cat > capacitor.config.json <<JSON
           {
             "appId": "${APP_ID}",
             "appName": "${APP_NAME}",
             "webDir": "www",
+            "bundledWebRuntime": false,
             "server": {
               "url": "${WEBSITE_URL}",
-              "cleartext": ${ALLOW_HTTP}
+              "cleartext": ${ALLOW_HTTP},
+              "allowNavigation": ["*"]
+            },
+            "ios": {
+              "scheme": "${APP_NAME}",
+              "backgroundColor": "${SPLASH_BACKGROUND}",
+              "preferredContentMode": "${IOS_DEVICE}",
+              "scrollEnabled": true,
+              "contentInset": "automatic"
             },
             "plugins": {
               "SplashScreen": {
-                "launchShowDuration": 1500,
+                "launchShowDuration": ${SPLASH_DURATION},
                 "launchAutoHide": true,
+                "launchFadeOutDuration": 400,
                 "backgroundColor": "${SPLASH_BACKGROUND}",
-                "showSpinner": true,
-                "spinnerColor": "#ffffff"
+                "showSpinner": false,
+                "splashFullScreen": true,
+                "splashImmersive": true,
+                "useDialog": false
               },
               "StatusBar": {
                 "style": "DARK",
                 "backgroundColor": "${STATUS_BAR_COLOR}"
+              },
+              "Keyboard": {
+                "resize": "body",
+                "style": "dark",
+                "resizeOnFullScreen": true
+              },
+              "PushNotifications": {
+                "presentationOptions": ["badge", "sound", "alert"]
               }
             }
           }
-          EOF
+          JSON
+
+          echo "📱 Adding iOS platform..."
           npx cap add ios
           npx cap sync ios
-          zip -r ios-project-unsigned.zip ios capacitor.config.json package.json package-lock.json www assets
 
-      - name: Upload iOS project
+      - name: "🔧 Customize iOS project"
+        shell: bash
+        run: |
+          set -eo pipefail
+          cd app/ios/App
+
+          # ── Info.plist — permissions & config ────────────────────────────────
+          PLIST="App/Info.plist"
+
+          # Orientation
+          if [[ "$ORIENTATION" == "portrait" || "$ORIENTATION" == "sensorPortrait" ]]; then
+            /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:1 string UIInterfaceOrientationPortraitUpsideDown" "$PLIST"
+          elif [[ "$ORIENTATION" == "landscape" || "$ORIENTATION" == "sensorLandscape" ]]; then
+            /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationLandscapeLeft" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:1 string UIInterfaceOrientationLandscapeRight" "$PLIST"
+          fi
+
+          # Fullscreen / Status bar
+          if [[ "$FULLSCREEN" == "true" ]]; then
+            /usr/libexec/PlistBuddy -c "Set :UIStatusBarHidden true" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :UIStatusBarHidden bool true" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Set :UIViewControllerBasedStatusBarAppearance false" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :UIViewControllerBasedStatusBarAppearance bool false" "$PLIST"
+          fi
+
+          # Permissions usage descriptions (App Store requirement)
+          if [[ "$GEOLOCATION" == "true" ]]; then
+            /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'This app uses your location to provide relevant local content.'" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'This app uses your location to provide relevant local content.'" "$PLIST" 2>/dev/null || true
+          fi
+          if [[ "$CAMERA" == "true" ]]; then
+            /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'This app uses the camera for capturing photos and videos.'" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'This app accesses your photo library.'" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'This app saves photos to your library.'" "$PLIST" 2>/dev/null || true
+          fi
+          if [[ "$MICROPHONE" == "true" ]]; then
+            /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'This app uses the microphone for audio recording.'" "$PLIST" 2>/dev/null || true
+          fi
+          if [[ "$PUSH_NOTIFICATIONS" == "true" ]]; then
+            /usr/libexec/PlistBuddy -c "Add :FirebaseAppDelegateProxyEnabled bool false" "$PLIST" 2>/dev/null || true
+          fi
+
+          # Allow HTTP
+          if [[ "$ALLOW_HTTP" == "true" ]]; then
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$PLIST" 2>/dev/null || true
+          fi
+
+          # Deep link scheme
+          if [[ -n "$DEEP_LINK_SCHEME" ]]; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string ${DEEP_LINK_SCHEME}" "$PLIST" 2>/dev/null || true
+          fi
+
+          # App version
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION_NAME}" "$PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${VERSION_NAME}" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION_CODE}" "$PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${VERSION_CODE}" "$PLIST"
+
+          echo "✅ iOS Info.plist configured"
+
+      - name: "🎨 Generate iOS icons & splash"
+        shell: bash
+        run: |
+          set -eo pipefail
+
+          if [[ -n "$ICON_URL" ]]; then
+            echo "⬇️ Downloading icon..."
+            curl -fsSL -o /tmp/icon_input "$ICON_URL" || rm -f /tmp/icon_input
+          fi
+
+          python3 <<'PY'
+          import os, pathlib, json
+          from PIL import Image, ImageDraw, ImageFont
+
+          APP_COLOR  = os.environ.get("APP_COLOR",    "#1a1a2e")
+          ICON_BG    = os.environ.get("ICON_BG_COLOR", APP_COLOR)
+          SPLASH_BG  = os.environ.get("SPLASH_BACKGROUND", APP_COLOR)
+          APP_NAME   = os.environ.get("APP_NAME", "App")
+          ICON_URL   = os.environ.get("ICON_URL", "")
+          ICON_SHAPE = os.environ.get("ICON_SHAPE", "rounded")
+          LETTER     = (APP_NAME.strip()[:1] or "A").upper()
+
+          # iOS does NOT allow alpha channel in icons — must be RGB
+          def make_icon(size):
+              p = pathlib.Path("/tmp/icon_input")
+              if ICON_URL and p.exists() and p.stat().st_size > 100:
+                  try:
+                      img = Image.open(p).convert("RGBA")
+                      bg  = Image.new("RGB", (size, size), ICON_BG)
+                      img = img.resize((size, size), Image.LANCZOS)
+                      bg.paste(img, mask=img.split()[3])
+                      return bg
+                  except Exception as e:
+                      print(f"⚠️  Icon error: {e}")
+
+              # Letter icon
+              img = Image.new("RGB", (size, size), ICON_BG)
+              d   = ImageDraw.Draw(img)
+              fs  = int(size * 0.52)
+              font = None
+              for fp in [
+                  "/System/Library/Fonts/HelveticaNeue.ttc",
+                  "/System/Library/Fonts/Helvetica.ttc",
+                  "/System/Library/Fonts/Arial.ttf",
+              ]:
+                  if pathlib.Path(fp).exists():
+                      try: font = ImageFont.truetype(fp, fs); break
+                      except Exception: pass
+              if font is None:
+                  font = ImageFont.load_default()
+              bb = d.textbbox((0,0), LETTER, font=font)
+              tw, th = bb[2]-bb[0], bb[3]-bb[1]
+              x = (size-tw)/2 - bb[0]
+              y = (size-th)/2 - bb[1] - size*0.02
+              d.text((x+2, y+3), LETTER, fill=(0,0,0,80), font=font)
+              d.text((x, y),     LETTER, fill=(255,255,255), font=font)
+              return img
+
+          ASSET_DIR = "app/ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          pathlib.Path(ASSET_DIR).mkdir(parents=True, exist_ok=True)
+
+          # iOS App Store icon sizes (points × scale → pixels)
+          # https://developer.apple.com/design/human-interface-guidelines/app-icons
+          ICONS = [
+              # iPhone
+              {"size": 20,   "scale": 2, "idiom": "iphone"},
+              {"size": 20,   "scale": 3, "idiom": "iphone"},
+              {"size": 29,   "scale": 2, "idiom": "iphone"},
+              {"size": 29,   "scale": 3, "idiom": "iphone"},
+              {"size": 40,   "scale": 2, "idiom": "iphone"},
+              {"size": 40,   "scale": 3, "idiom": "iphone"},
+              {"size": 60,   "scale": 2, "idiom": "iphone"},
+              {"size": 60,   "scale": 3, "idiom": "iphone"},
+              # iPad
+              {"size": 20,   "scale": 1, "idiom": "ipad"},
+              {"size": 20,   "scale": 2, "idiom": "ipad"},
+              {"size": 29,   "scale": 1, "idiom": "ipad"},
+              {"size": 29,   "scale": 2, "idiom": "ipad"},
+              {"size": 40,   "scale": 1, "idiom": "ipad"},
+              {"size": 40,   "scale": 2, "idiom": "ipad"},
+              {"size": 76,   "scale": 1, "idiom": "ipad"},
+              {"size": 76,   "scale": 2, "idiom": "ipad"},
+              {"size": 83.5, "scale": 2, "idiom": "ipad"},
+              # App Store
+              {"size": 1024, "scale": 1, "idiom": "ios-marketing"},
+          ]
+
+          contents_images = []
+          seen = set()
+
+          for entry in ICONS:
+              pts   = entry["size"]
+              scale = entry["scale"]
+              px    = int(pts * scale)
+              fname = f"Icon-{px}.png"
+              if px not in seen:
+                  img = make_icon(px)
+                  img.save(f"{ASSET_DIR}/{fname}")
+                  print(f"  ✅ {fname}")
+                  seen.add(px)
+              contents_images.append({
+                  "filename": fname,
+                  "idiom": entry["idiom"],
+                  "scale": f"{scale}x",
+                  "size": f"{pts}x{pts}"
+              })
+
+          contents = {"images": contents_images, "info": {"author": "xcode", "version": 1}}
+          with open(f"{ASSET_DIR}/Contents.json", "w") as f:
+              json.dump(contents, f, indent=2)
+
+          # ── Launch screen / splash ─────────────────────────────────────────
+          SPLASH_DIR = "app/ios/App/App/Assets.xcassets/Splash.imageset"
+          pathlib.Path(SPLASH_DIR).mkdir(parents=True, exist_ok=True)
+
+          for px, name in [(1125, "Splash@1x"), (2436, "Splash@2x"), (3240, "Splash@3x")]:
+              s = Image.new("RGB", (px, px*2160//1080), SPLASH_BG)
+              icon = make_icon(int(px*0.3))
+              ox = (s.width  - icon.width)  // 2
+              oy = (s.height - icon.height) // 2 - 80
+              s.paste(icon, (ox, oy))
+              s.save(f"{SPLASH_DIR}/{name}.png")
+
+          with open(f"{SPLASH_DIR}/Contents.json", "w") as f:
+              json.dump({
+                  "images": [
+                      {"filename": "Splash@1x.png", "idiom": "universal", "scale": "1x"},
+                      {"filename": "Splash@2x.png", "idiom": "universal", "scale": "2x"},
+                      {"filename": "Splash@3x.png", "idiom": "universal", "scale": "3x"},
+                  ],
+                  "info": {"author": "xcode", "version": 1}
+              }, f, indent=2)
+
+          print("✅ iOS icons & splash screens generated")
+          PY
+
+      - name: "📝 Update iOS deployment target"
+        shell: bash
+        run: |
+          set -eo pipefail
+          PBXPROJ="app/ios/App/App.xcodeproj/project.pbxproj"
+          if [[ -f "$PBXPROJ" ]]; then
+            sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = ${IOS_DEPLOYMENT_TARGET}/g" "$PBXPROJ" || true
+            sed -i '' "s/SWIFT_VERSION = [0-9.]*/SWIFT_VERSION = 5.9/g" "$PBXPROJ" || true
+            echo "✅ Deployment target set to iOS ${IOS_DEPLOYMENT_TARGET}"
+          fi
+
+      - name: "📦 Package iOS project as zip"
+        shell: bash
+        run: |
+          set -eo pipefail
+          cd app
+          ZIP_NAME="${APP_ID}-ios-project-v${VERSION_NAME}.zip"
+          zip -r "$ZIP_NAME" ios capacitor.config.json package.json package-lock.json www \
+            --exclude "*.DS_Store" --exclude "*/.git/*"
+          echo "✅ Packaged: $ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: "📋 iOS Build Summary"
+        shell: bash
+        run: |
+          echo "### 🍎 iOS Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| App Name | ${APP_NAME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bundle ID | ${APP_ID} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Website URL | ${WEBSITE_URL} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${VERSION_NAME} (${VERSION_CODE}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Min iOS | ${IOS_DEPLOYMENT_TARGET} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Device | ${IOS_DEVICE} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Next steps:** Download the zip, open in Xcode, set your Team, then Archive → Distribute App." >> $GITHUB_STEP_SUMMARY
+
+      - name: "⬆️ Upload iOS project zip"
         uses: actions/upload-artifact@v4
         with:
-          name: ios-project-unsigned
-          path: app/ios-project-unsigned.zip
+          name: "${{ github.event.inputs.app_id }}-ios-project-v${{ github.event.inputs.version_name }}"
+          path: "app/${{ env.ZIP_NAME }}"
           if-no-files-found: error
+          retention-days: 30
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# JOB 4 — RELEASE (optional)
+# ═══════════════════════════════════════════════════════════════════════════════
   release:
-    name: Optional Release
-    needs: [android, ios]
-    if: always() && github.event.inputs.create_release == 'true'
+    name: "🚀 Create GitHub Release"
+    needs: [validate, android, ios]
+    if: |
+      always() &&
+      github.event.inputs.create_release == 'true' &&
+      (needs.android.result == 'success' || needs.android.result == 'skipped') &&
+      (needs.ios.result == 'success' || needs.ios.result == 'skipped')
     runs-on: ubuntu-latest
+
     steps:
-      - name: Download artifacts
+      - name: "⬇️ Download all artifacts"
         uses: actions/download-artifact@v4
         with:
           path: release-files
-      - name: Zip outputs
-        run: zip -r outputs.zip release-files
-      - name: Create GitHub Release
+
+      - name: "📦 Prepare release assets"
+        shell: bash
+        run: |
+          mkdir -p final
+          # Flatten: copy all built files to final/
+          find release-files -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.zip" \) \
+            -exec cp {} final/ \;
+          ls -lh final/
+
+      - name: "🚀 Create GitHub Release"
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
-          name: ${{ github.event.inputs.app_name }} ${{ github.event.inputs.release_tag }}
-          files: outputs.zip
+          name: "${{ github.event.inputs.app_name }} ${{ github.event.inputs.release_tag }}"
+          body: |
+            ## 📱 ${{ github.event.inputs.app_name }} — ${{ github.event.inputs.release_tag }}
+
+            | Property | Value |
+            |---|---|
+            | App ID | `${{ github.event.inputs.app_id }}` |
+            | Website | ${{ github.event.inputs.website_url }} |
+            | Version | `${{ github.event.inputs.version_name }}` (build `${{ github.event.inputs.version_code }}`) |
+            | Built | ${{ github.event.inputs.build_target }} |
+
+            ### 📦 Assets
+            - **APK** — Sideload on Android for testing
+            - **AAB** — Upload to Google Play Console
+            - **iOS zip** — Open in Xcode, set Team, Archive → Distribute to App Store Connect
+
+            ### 🔑 Notes
+            ${{ github.event.inputs.release_notes }}
+
+            ---
+            *Built with [Ultimate Native App Builder](https://github.com/${{ github.repository }})*
+          files: final/*
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
