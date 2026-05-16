@@ -309,7 +309,7 @@ env:
 jobs:
   android:
     name: 🟢 Build Android APK/AAB
-    if: env.BUILD_TARGET == 'android' || env.BUILD_TARGET == 'both'
+    if: ${{ github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'both' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -807,7 +807,7 @@ jobs:
       #  BUILD APK
       # ---------------------------------------------------------------
       - name: 🔨 Build debug APK
-        if: env.ANDROID_OUTPUT == 'apk' || env.ANDROID_OUTPUT == 'both'
+        if: ${{ github.event.inputs.android_output == 'apk' || github.event.inputs.android_output == 'both' }}
         shell: bash
         run: |
           cd app/android
@@ -818,7 +818,7 @@ jobs:
       #  BUILD UNSIGNED AAB
       # ---------------------------------------------------------------
       - name: 📦 Build release AAB (unsigned)
-        if: env.ANDROID_OUTPUT == 'aab' || env.ANDROID_OUTPUT == 'both'
+        if: ${{ github.event.inputs.android_output == 'aab' || github.event.inputs.android_output == 'both' }}
         shell: bash
         run: |
           cd app/android
@@ -849,7 +849,7 @@ jobs:
   # ===================================================================
   ios:
     name: 🍏 Build iOS Xcode project
-    if: env.BUILD_TARGET == 'ios' || env.BUILD_TARGET == 'both'
+    if: ${{ github.event.inputs.build_target == 'ios' || github.event.inputs.build_target == 'both' }}
     runs-on: macos-latest
 
     steps:
