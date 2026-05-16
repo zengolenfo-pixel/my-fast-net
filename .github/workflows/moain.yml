@@ -223,20 +223,37 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install pillow
 
-      - name: 🧩 Parse extra_config_json and export variables
-        id: extra
+      - name: 🧩 Set safe defaults for extra config variables
         shell: bash
         run: |
-          echo "SPLASH_DURATION=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.splash_show_duration // "1500"')" >> $GITHUB_ENV
-          echo "ADAPTIVE_ICON=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.adaptive_icon // true')" >> $GITHUB_ENV
-          echo "ICON_FG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_foreground_color // "#FFFFFF"')" >> $GITHUB_ENV
-          echo "ICON_BG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_background_color // "#111827"')" >> $GITHUB_ENV
-          echo "CUSTOM_JS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_javascript // ""')" >> $GITHUB_ENV
-          echo "CUSTOM_CSS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_css // ""')" >> $GITHUB_ENV
-          echo "PULL_TO_REFRESH=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.pull_to_refresh // false')" >> $GITHUB_ENV
-          echo "DISABLE_BACK=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.disable_back_button // false')" >> $GITHUB_ENV
-          PERMS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.permissions // [] | join(",")')
-          echo "PERMISSIONS=${PERMS}" >> $GITHUB_ENV
+          # These defaults are used if parsing fails or JSON is empty
+          echo "SPLASH_DURATION=1500" >> $GITHUB_ENV
+          echo "ADAPTIVE_ICON=true" >> $GITHUB_ENV
+          echo "ICON_FG_COLOR=#FFFFFF" >> $GITHUB_ENV
+          echo "ICON_BG_COLOR=#111827" >> $GITHUB_ENV
+          echo "CUSTOM_JS=" >> $GITHUB_ENV
+          echo "CUSTOM_CSS=" >> $GITHUB_ENV
+          echo "PULL_TO_REFRESH=false" >> $GITHUB_ENV
+          echo "DISABLE_BACK=false" >> $GITHUB_ENV
+          echo "PERMISSIONS=" >> $GITHUB_ENV
+
+      - name: 🧩 Parse extra_config_json (overrides defaults)
+        shell: bash
+        continue-on-error: true
+        run: |
+          # Override with actual values if JSON is valid
+          if [[ -n "$EXTRA_CONFIG_JSON" && "$EXTRA_CONFIG_JSON" != "{}" ]]; then
+            echo "SPLASH_DURATION=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.splash_show_duration // "1500"')" >> $GITHUB_ENV
+            echo "ADAPTIVE_ICON=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.adaptive_icon // true')" >> $GITHUB_ENV
+            echo "ICON_FG_COLOR=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.icon_foreground_color // "#FFFFFF"')" >> $GITHUB_ENV
+            echo "ICON_BG_COLOR=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.icon_background_color // "#111827"')" >> $GITHUB_ENV
+            echo "CUSTOM_JS=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.custom_javascript // ""')" >> $GITHUB_ENV
+            echo "CUSTOM_CSS=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.custom_css // ""')" >> $GITHUB_ENV
+            echo "PULL_TO_REFRESH=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.pull_to_refresh // false')" >> $GITHUB_ENV
+            echo "DISABLE_BACK=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.disable_back_button // false')" >> $GITHUB_ENV
+            PERMS=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.permissions // [] | join(",")')
+            echo "PERMISSIONS=${PERMS}" >> $GITHUB_ENV
+          fi
 
       - name: 🧱 Create Capacitor Android project
         shell: bash
@@ -477,7 +494,7 @@ jobs:
           splash.save(out_path)
           PYSPLASH
 
-          # Remove default styles.xml to avoid duplicate AppTheme resources
+          # Remove Capacitor's default styles to avoid duplicate AppTheme resources
           rm -f app/src/main/res/values/styles.xml
 
           mkdir -p app/src/main/res/values app/src/main/res/values-v31
@@ -655,21 +672,36 @@ jobs:
         with:
           node-version: 22
 
-      - name: 📦 Install jq (extra config parser)
+      - name: 📦 Install jq
         shell: bash
         run: brew install jq || true
 
-      - name: 🧩 Parse extra_config_json and export variables
+      - name: 🧩 Set safe defaults for extra config variables
         shell: bash
         run: |
-          echo "SPLASH_DURATION=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.splash_show_duration // "1500"')" >> $GITHUB_ENV
-          echo "ADAPTIVE_ICON=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.adaptive_icon // true')" >> $GITHUB_ENV
-          echo "ICON_FG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_foreground_color // "#FFFFFF"')" >> $GITHUB_ENV
-          echo "ICON_BG_COLOR=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.icon_background_color // "#111827"')" >> $GITHUB_ENV
-          echo "CUSTOM_JS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_javascript // ""')" >> $GITHUB_ENV
-          echo "CUSTOM_CSS=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.custom_css // ""')" >> $GITHUB_ENV
-          echo "PULL_TO_REFRESH=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.pull_to_refresh // false')" >> $GITHUB_ENV
-          echo "DISABLE_BACK=$(echo '${{ env.EXTRA_CONFIG_JSON }}' | jq -r '.disable_back_button // false')" >> $GITHUB_ENV
+          echo "SPLASH_DURATION=1500" >> $GITHUB_ENV
+          echo "ADAPTIVE_ICON=true" >> $GITHUB_ENV
+          echo "ICON_FG_COLOR=#FFFFFF" >> $GITHUB_ENV
+          echo "ICON_BG_COLOR=#111827" >> $GITHUB_ENV
+          echo "CUSTOM_JS=" >> $GITHUB_ENV
+          echo "CUSTOM_CSS=" >> $GITHUB_ENV
+          echo "PULL_TO_REFRESH=false" >> $GITHUB_ENV
+          echo "DISABLE_BACK=false" >> $GITHUB_ENV
+
+      - name: 🧩 Parse extra_config_json (overrides defaults)
+        shell: bash
+        continue-on-error: true
+        run: |
+          if [[ -n "$EXTRA_CONFIG_JSON" && "$EXTRA_CONFIG_JSON" != "{}" ]]; then
+            echo "SPLASH_DURATION=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.splash_show_duration // "1500"')" >> $GITHUB_ENV
+            echo "ADAPTIVE_ICON=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.adaptive_icon // true')" >> $GITHUB_ENV
+            echo "ICON_FG_COLOR=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.icon_foreground_color // "#FFFFFF"')" >> $GITHUB_ENV
+            echo "ICON_BG_COLOR=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.icon_background_color // "#111827"')" >> $GITHUB_ENV
+            echo "CUSTOM_JS=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.custom_javascript // ""')" >> $GITHUB_ENV
+            echo "CUSTOM_CSS=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.custom_css // ""')" >> $GITHUB_ENV
+            echo "PULL_TO_REFRESH=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.pull_to_refresh // false')" >> $GITHUB_ENV
+            echo "DISABLE_BACK=$(echo '$EXTRA_CONFIG_JSON' | jq -r '.disable_back_button // false')" >> $GITHUB_ENV
+          fi
 
       - name: 🧱 Create Capacitor iOS project
         shell: bash
